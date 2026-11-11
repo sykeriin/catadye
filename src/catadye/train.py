@@ -16,7 +16,7 @@ from .staggered import StaggeredOptimizer
 
 
 @torch.no_grad()
-def evaluate(model, windows, device, bs=32):
+def evaluate(model, windows, device, bs=8):
     model.eval()
     xs, ys = windows
     tot, n = 0.0, 0
@@ -64,16 +64,19 @@ def run(cfg: dict, out_dir: str | Path = "results") -> dict:
         torch.cuda.reset_peak_memory_stats()
     gstep = 0
     for i, d in enumerate(domains):
-        batcher = Batcher(data[d][0], mc.ctx, bs, seed=cfg["seed"] * 1000 + i, device=device)
+        micro = cfg.get("micro_batches", 1)  # same gradient, lower peak memory (4 GB card)
+        assert bs % micro == 0
+        batcher = Batcher(data[d][0], mc.ctx, bs // micro, seed=cfg["seed"] * 1000 + i, device=device)
         for s in range(steps):
             gstep += 1
             so.set_lr(lr_at(s, steps, cfg["lr"], cfg.get("warmup", 100)))
-            x, y = batcher.get()
-            with torch.autocast(device, dtype=torch.bfloat16, enabled=(device == "cuda")):
-                _, loss = model(x, y)
-            loss.backward()
+            for _ in range(micro):
+                x, y = batcher.get()
+                with torch.autocast(device, dtype=torch.bfloat16, enabled=(device == "cuda")):
+                    _, loss = model(x, y)
+                (loss / micro).backward()
+                tokens += x.numel()
             so.step(gstep)
-            tokens += x.numel()
             if (s + 1) % 200 == 0:
                 log.append(dict(domain=d, step=s + 1, loss=loss.item()))
         # flush any partially accumulated slow groups so domain boundaries are clean

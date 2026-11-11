@@ -6,6 +6,7 @@ seed: 0
 domains: [tinystories, python]
 steps_per_domain: 2000
 batch: 16
+micro_batches: 2
 lr: 6.0e-4
 warmup: 100
 weight_decay: 0.1

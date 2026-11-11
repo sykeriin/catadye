@@ -10,31 +10,52 @@ import numpy as np
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
-# name -> (hf dataset, config, split, text field). Streamed; only the first documents are read.
+# Raw files streamed over HTTP (no `datasets`/pandas/pyarrow: those DLLs are blocked by this
+# machine's Application Control policy). Only the first bytes needed are read.
+HF = "https://huggingface.co/datasets"
 DOMAINS = {
-    "tinystories": ("roneneldan/TinyStories", None, "train", "text"),
-    "python": ("codeparrot/codeparrot-clean-valid", None, "train", "content"),
-    "wikitext": ("Salesforce/wikitext", "wikitext-103-raw-v1", "train", "text"),
+    "tinystories": ("txt", f"{HF}/roneneldan/TinyStories/resolve/main/TinyStories-train.txt"),
+    "python": ("jsonl.gz:content", f"{HF}/codeparrot/codeparrot-clean-valid/resolve/main/file-000000000054.json.gz"),
 }
+
+
+def _iter_docs(kind: str, url: str):
+    import gzip
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={"User-Agent": "research-client"})
+    resp = urllib.request.urlopen(req, timeout=60)
+    if kind == "txt":
+        buf = ""
+        while True:
+            b = resp.read(1 << 20)
+            if not b:
+                break
+            buf += b.decode("utf-8", errors="ignore")
+            *docs, buf = buf.split("<|endoftext|>")
+            yield from docs
+    else:
+        import json
+
+        field = kind.split(":")[1]
+        for line in gzip.GzipFile(fileobj=resp):
+            yield json.loads(line)[field]
 
 
 def build_domain(name: str, n_train: int, n_eval: int, force: bool = False) -> None:
     """Stream documents, tokenize, and write {name}_train.npy / {name}_eval.npy."""
     import tiktoken
-    from datasets import load_dataset
 
     DATA_DIR.mkdir(exist_ok=True)
     tr, ev = DATA_DIR / f"{name}_train.npy", DATA_DIR / f"{name}_eval.npy"
     if tr.exists() and ev.exists() and not force:
         return
-    repo, cfg, split, field = DOMAINS[name]
+    kind, url = DOMAINS[name]
     enc = tiktoken.get_encoding("gpt2")
     eot = enc.eot_token
-    ds = load_dataset(repo, cfg, split=split, streaming=True)
     need = n_train + n_eval
     chunks, total = [], 0
-    for ex in ds:
-        text = ex[field]
+    for text in _iter_docs(kind, url):
         if not text or not text.strip():
             continue
         ids = enc.encode_ordinary(text) + [eot]
