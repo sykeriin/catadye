@@ -1,0 +1,18 @@
+# Stage 0 pilot. Arms are set per run: name/mode overridden by scripts/run_pilot.py
+name: pilot_baseline
+mode: none            # none | cms | lr_matched
+periods: [1, 8, 64]
+seed: 0
+domains: [tinystories, python]
+steps_per_domain: 2000
+batch: 16
+lr: 6.0e-4
+warmup: 100
+weight_decay: 0.1
+eval_windows: 64
+model:
+  n_layer: 4
+  n_head: 4
+  d_model: 256
+  ctx: 256
+  n_sub: 3

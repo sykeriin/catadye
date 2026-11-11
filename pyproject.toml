@@ -1,0 +1,9 @@
+[project]
+name = "catadye"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["torch", "numpy", "datasets", "tiktoken", "pyyaml", "scipy", "matplotlib"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
