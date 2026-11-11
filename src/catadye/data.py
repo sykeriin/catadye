@@ -49,7 +49,9 @@ def build_domain(name: str, n_train: int, n_eval: int, force: bool = False) -> N
     DATA_DIR.mkdir(exist_ok=True)
     tr, ev = DATA_DIR / f"{name}_train.npy", DATA_DIR / f"{name}_eval.npy"
     if tr.exists() and ev.exists() and not force:
-        return
+        # a cache built for a smaller run must not silently be reused
+        if len(np.load(tr, mmap_mode="r")) >= n_train and len(np.load(ev, mmap_mode="r")) >= n_eval:
+            return
     kind, url = DOMAINS[name]
     enc = tiktoken.get_encoding("gpt2")
     eot = enc.eot_token
