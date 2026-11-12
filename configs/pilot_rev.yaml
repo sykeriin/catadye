@@ -1,0 +1,20 @@
+# Pilot revision 1 (see README "Pilot revision 1"). Larger staggered share, lr sweep, order check.
+name: rev
+mode: none
+periods: [1, 8, 64]
+seed: 0
+domains: [tinystories, python]
+steps_per_domain: 2000
+batch: 16
+micro_batches: 2
+lr: 6.0e-4
+warmup: 100
+weight_decay: 0.1
+eval_windows: 64
+model:
+  n_layer: 6
+  n_head: 4
+  d_model: 256
+  ctx: 256
+  n_sub: 3
+  sub_hidden_mult: 4.0   # each sub-block is a full 4x MLP; chain = 3 of them (was 4/3)

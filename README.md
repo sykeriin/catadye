@@ -66,6 +66,27 @@ replay, Stage 1b, a negative-result write-up) and skip Stage 2.
 - 2026-11-11: raw data streamed over HTTP; `datasets`/pandas/pyarrow are blocked on the dev machine.
   Pilot domains: TinyStories (first documents of the train file) then Python code (codeparrot-clean-valid).
 
+## Pilot revision 1 (declared 2026-11-12, BEFORE any revised run)
+
+Motivation: the first pilot was negative but had three weaknesses (below). This revision addresses
+them; it is not a search for a positive result. The first pilot's numbers stay in the Results log
+and in `results/pilot/`. **The revised pilot is the final input to the pre-registered decision gate;
+no further pilot revisions will be made to rescue the hypothesis.**
+
+Changes (all fixed here, before running):
+1. Staggered share: 6 layers, each sub-block a full 4x MLP (was 4 layers, 4/3x), taking the share of
+   parameters in staggered sub-blocks from ~13% to ~40%. Periods stay 1/8/64.
+2. Matched plasticity done properly: every arm runs at 3 learning rates (3e-4, 6e-4, 1.2e-3).
+3. Order check: reversed domain order (Python -> TinyStories) for all arms at lr 6e-4.
+Seeds 0-2 as before. Runs: 27 (order A) + 9 (order B) = 36, ~11 min each.
+
+Revised readout (fixed now): for each arm and seed, forgetting is linearly interpolated as a
+function of new-domain loss across the 3 learning rates, and evaluated at a common new-domain loss
+(the median baseline new-domain loss, used only if inside every arm's range; otherwise reported as
+"no overlap"). Seed-paired bootstrap CIs of arm differences at that point. Criteria (a) and (b) and
+their thresholds (>=10% reduction, CI below 0) are unchanged. Raw per-lr differences are also
+reported. Order B is reported as a robustness check, not used in the gate.
+
 ## Results log
 
 ### Stage 0 pilot (2026-11-12) — raw runs in `results/pilot/`, readout via `scripts/analyze_pilot.py`

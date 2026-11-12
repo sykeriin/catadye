@@ -85,7 +85,9 @@ def run(cfg: dict, out_dir: str | Path = "results") -> dict:
     wall = time.time() - t0
     res = dict(
         name=cfg["name"], seed=cfg["seed"], mode=cfg["mode"], domains=domains, cfg=cfg,
-        n_params=model.n_params(), R0=R0.tolist(), R=R.tolist(), wall_s=wall, tokens=tokens,
+        n_params=model.n_params(),
+        sub_param_share=sum(p.numel() for n, p in model.named_parameters() if ".mlp.subs." in n) / model.n_params(),
+        R0=R0.tolist(), R=R.tolist(), wall_s=wall, tokens=tokens,
         tokens_per_s=tokens / wall, frac_params_updated_per_step=so.fraction_updated_per_step(model),
         peak_vram_mb=(torch.cuda.max_memory_allocated() / 2**20 if device == "cuda" else None), log=log,
     )
