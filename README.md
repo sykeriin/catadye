@@ -16,8 +16,8 @@ separately.
 |---|---|
 | Literature check, plan, pre-registration | done (`prereg-v1`) |
 | Stage 0 pilot (16.1M params) | done, **negative**: CMS did not reduce forgetting |
-| Pilot revision 1 (bigger staggered share, lr sweep, order check) | declared (`prereg-pilot-rev1`), running |
-| Stage 1 main grid, Stage 1b test-time probe, Stage 2 LoRA | not started; gated on the pilot |
+| Pilot revision 1 (bigger staggered share, lr sweep, order check) | done (`prereg-pilot-rev1`), **negative again**: gate says short version |
+| Stage 1 main grid, Stage 1b test-time probe, Stage 2 LoRA | not started; next step needs a go-ahead |
 
 ## What is being tested
 
@@ -60,7 +60,29 @@ eval loss after training on code; plasticity (new-domain loss) is matched across
 
 ![Pilot 1 results](figures/pilot1_results.png)
 
-Details, caveats and the full table are in the [Results log](#results-log) below. Figures are
+Revised pilot (24.0M params, staggered sub-blocks = 39% of parameters, 3 learning rates, 3 seeds).
+At every learning rate CMS learns the new domain slightly better *and* forgets slightly more, so
+the arms trace the same stability-plasticity line; at matched plasticity there is no detectable
+difference. Reversing the domain order gives the same picture.
+
+![Revised pilot: stability-plasticity frontier and order check](figures/pilot_rev_frontier.png)
+
+| Forgetting at matched new-domain loss (2.79), nats | mean ± sd | difference vs baseline [95% CI] |
+|---|---|---|
+| baseline | 3.592 ± 0.163 | |
+| CMS 1/8/64 | 3.678 ± 0.060 | +0.085 [-0.169, +0.252] |
+| LR-matched control | 3.567 ± 0.049 | -0.025 [-0.156, +0.085] |
+
+CMS vs LR-matched: +0.111 [-0.013, +0.179]. Pre-registered criteria (a) and (b) both fail, so the
+gate selects the short version of the plan. Order B (lr 6e-4): baseline 4.90 ± 0.17, CMS 5.14 ± 0.20,
+LR-matched 5.20 ± 0.07 (n=3 each; not used in the gate).
+
+**Reading:** per-step update-frequency staggering is indistinguishable from a smaller learning
+rate and gives no forgetting benefit here. This does not test Hope's test-time CMS on a pretrained
+model, its nested consolidation between levels, the self-modifying memory, or multi-timescale
+momentum.
+
+Details, caveats and the full tables are in the [Results log](#results-log) below. Figures are
 regenerated from the raw run files in `results/` by `python scripts/make_figures.py`.
 
 ## Reproduce
@@ -178,3 +200,17 @@ Caveats: 3 seeds (bootstrap has 27 distinct resamples, so CIs are coarse); one l
 one domain order; the staggered sub-blocks are only ~13% of the parameters (embeddings are ~80%),
 so the intervention touches little of the model; forgetting is extreme (>3 nats) in this regime.
 Per the decision gate, the short version of the plan applies unless the pilot is revised.
+
+### Pilot revision 1 (2026-11-12) — raw runs in `results/pilot_rev/`, readout via `scripts/analyze_pilot_rev.py`
+Per-learning-rate means over 3 seeds (new-domain loss, forgetting in nats), order A:
+
+| lr | baseline | CMS 1/8/64 | LR-matched |
+|---|---|---|---|
+| 3e-4 | 3.002, 3.172 | 2.978, 3.285 | 2.980, 3.232 |
+| 6e-4 | 2.802, 3.568 | 2.743, 3.780 | 2.754, 3.632 |
+| 1.2e-3 | 2.659, 4.007 | 2.588, 4.260 | 2.597, 4.069 |
+
+The declared interpolation target (median baseline new-domain loss, 2.790) lay inside every arm's
+range for every seed, so the matched-plasticity test was valid. Outcome: criteria (a) and (b) fail;
+gate = short version. Per the declaration, no further pilot revisions will be made.
+Caveats: 3 seeds; one period set (1/8/64); small scale (24.0M params); from-scratch model; no replay.
