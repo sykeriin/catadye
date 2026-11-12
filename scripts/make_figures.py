@@ -129,7 +129,72 @@ def fig_rev(runs):
     return True
 
 
+# ---- 4. how forgetting is measured (real numbers) ---------------------------------------------
+def fig_loss_matrix(runs):
+    A = [r for r in runs if r["cfg"].get("order") == "A" and r["mode"] == "none" and r["cfg"]["lr"] == 6e-4]
+    if not A:
+        return False
+    R = np.mean([r["R"] for r in A], axis=0)
+    fig, ax = plt.subplots(figsize=(5.6, 4.2))
+    ax.grid(False)
+    im = ax.imshow(R, cmap="Oranges", vmin=2, vmax=7)
+    for i in range(2):
+        for j in range(2):
+            ax.text(j, i, f"{R[i, j]:.2f}", ha="center", va="center", fontsize=13, fontweight="bold")
+    ax.set_xticks([0, 1], ["TinyStories\n(old)", "Python\n(new)"])
+    ax.set_yticks([0, 1], ["after training\non TinyStories", "after training\non Python"])
+    ax.set_xlabel("evaluated on", fontsize=9)
+    ax.annotate("", xy=(0.40, 0.78), xytext=(0.40, 0.22), arrowprops=dict(arrowstyle="->", lw=2, color="#c92a2a"))
+    ax.annotate(f"forgetting\n= R[1,0] - R[0,0]\n= +{R[1, 0] - R[0, 0]:.2f} nats", xy=(1.04, 0.5),
+                xycoords="axes fraction", color="#c92a2a", fontsize=9, va="center", ha="left")
+    ax.set_title("Loss matrix R[i,j] (baseline, lr 6e-4, mean of 3 seeds, nats)", fontsize=9)
+    fig.savefig(FIG / "loss_matrix.png", dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
+# ---- 5. matched plasticity on the real frontier ------------------------------------------------
+def fig_matched(runs):
+    A = [r for r in runs if r["cfg"].get("order") == "A"]
+    if not A:
+        return False
+    pts = {}
+    for a in ["none", "cms", "lr_matched"]:
+        v = []
+        for lr in sorted({r["cfg"]["lr"] for r in A}):
+            rr = [(new_domain_loss(np.array(r["R"])), forgetting(np.array(r["R"])))
+                  for r in A if r["mode"] == a and r["cfg"]["lr"] == lr]
+            v.append(np.mean(rr, axis=0))
+        pts[a] = np.array(sorted(v, key=lambda t: t[0]))
+    target = float(np.median([new_domain_loss(np.array(r["R"])) for r in A if r["mode"] == "none"]))
+    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    vals = {}
+    for a, p in pts.items():
+        ax.plot(p[:, 0], p[:, 1], "-o", color=COL[a], ms=4, lw=1.2, alpha=0.8, label=LAB[a])
+        f = float(np.interp(target, p[:, 0], p[:, 1]))
+        ax.scatter([target], [f], s=90, facecolor="white", edgecolor=COL[a], lw=2, zorder=5)
+        vals[a] = f
+    ax.axvline(target, color="#444", ls="--", lw=1)
+    ax.text(target + 0.008, 4.27, f"target plasticity\n(median baseline = {target:.2f})", fontsize=8, va="top",
+            color="#444")
+    ax.text(0.985, 0.97, "forgetting at the target (circles):\n" + "\n".join(
+        f"{LAB[a]:11s} {vals[a]:.2f}" for a in ("none", "cms", "lr_matched")) +
+        "\n\nillustrative: interpolated on seed-averaged\ncurves; the pre-registered per-seed test\ngives 3.59 / 3.68 / 3.57",
+        transform=ax.transAxes, ha="right", va="top", fontsize=7.5, family="monospace",
+        bbox=dict(boxstyle="round", fc="white", ec="#ccc"))
+    ax.set_xlim(2.55, 3.05); ax.set_ylim(3.1, 4.3)
+    ax.set_xlabel("new-domain loss (plasticity)")
+    ax.set_ylabel("forgetting (nats)")
+    ax.set_title("Matched plasticity: read each arm's forgetting where it crosses the dashed line", fontsize=9)
+    ax.legend(frameon=False, fontsize=8, loc="lower left")
+    fig.savefig(FIG / "matched_plasticity.png", dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
 if __name__ == "__main__":
+    _rev = load("pilot_rev")
+    print("loss matrix:", fig_loss_matrix(_rev) if _rev else False, "; matched:", fig_matched(_rev) if _rev else False)
     fig_schedule()
     p1 = load("pilot")
     if p1:

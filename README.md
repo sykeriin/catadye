@@ -17,7 +17,9 @@ separately.
 | Literature check, plan, pre-registration | done (`prereg-v1`) |
 | Stage 0 pilot (16.1M params) | done, **negative**: CMS did not reduce forgetting |
 | Pilot revision 1 (bigger staggered share, lr sweep, order check) | done (`prereg-pilot-rev1`), **negative again**: gate says short version |
-| Stage 1 main grid, Stage 1b test-time probe, Stage 2 LoRA | not started; next step needs a go-ahead |
+| Stage 1b test-time probe | declared (`prereg-stage1b`), base models training, then 30 runs |
+| Post-hoc diagnostics (where does forgetting live?) | queued behind the base models (exploratory, not pre-registered) |
+| Stage 1 main grid, Stage 2 LoRA | not started |
 
 ## What is being tested
 
@@ -51,6 +53,68 @@ flowchart TD
     G -- yes --> FULL["Full plan: Stage 1 grid (5 seeds),<br/>pretrained-model check, Stage 1b, Stage 2 LoRA"]
     S0 -. "weaknesses found" .-> R1["Pilot revision 1 (declared before running):<br/>lr sweep, bigger staggered share, order check"]
     R1 --> G
+```
+
+## How forgetting is measured
+
+Each model trains on domain 1 and then domain 2; after each domain it is evaluated on both. The
+**forgetting** number is how much the domain-1 loss rises after training on domain 2 (positive =
+forgetting; lower is better).
+
+![Loss matrix](figures/loss_matrix.png)
+
+Slower learning forgets less but also learns the new domain less, so arms are only compared at the
+same **plasticity** (new-domain loss). Each arm is run at 3 learning rates, which traces a
+stability-plasticity line; forgetting is then read off each line at a common new-domain loss. The
+pre-registered test does this per seed with bootstrap CIs.
+
+![Matched plasticity](figures/matched_plasticity.png)
+
+## What this repo tests, and what it does not
+
+Hope has several parts. Colour shows what is covered here: green = tested, amber = planned or
+running, grey = not tested (so nothing here supports or refutes it).
+
+```mermaid
+flowchart LR
+    subgraph HOPE["Hope / Nested Learning (arXiv 2512.24695)"]
+        direction TB
+        C1["CMS: MLP blocks at different<br/>update frequencies"]
+        C2["Nested consolidation:<br/>slower levels learn from faster ones"]
+        C3["Self-modifying Titans memory"]
+        C4["Multi-timescale momentum (M3)"]
+        C5["Test-time updates on a pretrained<br/>Llama, 15B extra tokens"]
+    end
+    C1 --> T1["Per-step staggering during training<br/>2 pilots: no benefit"]
+    C1 --> T2["Test-time staggering on a small<br/>from-scratch model (Stage 1b)"]
+    C4 --> T3["Slow-momentum AdamW arm<br/>(short-version plan)"]
+    C2 --> N1["not tested"]
+    C3 --> N2["not tested (out of scope)"]
+    C5 --> N3["not tested; pretrained-125M<br/>check is future work"]
+    classDef done fill:#d3f9d8,stroke:#2f9e44,color:#1b1b1b
+    classDef plan fill:#fff3bf,stroke:#f08c00,color:#1b1b1b
+    classDef none fill:#e9ecef,stroke:#868e96,color:#1b1b1b
+    class T1 done
+    class T2,T3 plan
+    class N1,N2,N3 none
+```
+
+## Stage 1b at a glance (test-time probe)
+
+```mermaid
+flowchart TD
+    B["Base model: trained on TinyStories only<br/>(same for every arm)"] --> S
+    subgraph S["Test-time stream: ~1M tokens of Python, 1000 steps"]
+        direction LR
+        W["4 consecutive windows<br/>(1024 tokens)"] --> SC["score with current weights<br/>(online loss)"]
+        SC --> U["update MLP sub-blocks only,<br/>rule depends on arm"]
+        U --> W
+    end
+    S --> E["Every 250 steps: held-out loss on<br/>Python (plasticity) and TinyStories (forgetting)"]
+    A1["frozen: no updates (plain in-context)"] -.-> U
+    A2["ttt_single: all sub-blocks every step"] -.-> U
+    A3["ttt_cms: sub-blocks every 1 / 8 / 64 steps"] -.-> U
+    A4["ttt_lrm: every step, lr / 1, 8, 64"] -.-> U
 ```
 
 ## Results so far
