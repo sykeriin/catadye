@@ -147,3 +147,27 @@ regime. Design: identical to Stage 1b (same bases, stream, arms, seeds 0-2) at l
 `results/ttt_low/`. Exploratory, no gate. Primary readout: at each lr, seed-paired difference in forgetting for
 CMS vs single-rate and CMS vs LR-matched, with bootstrap CI; "no effect" if the CI includes 0. Frozen-model numbers
 are reused from Stage 1b. Nothing else is tuned.
+
+## Stage 1c: controls and slow momentum (declared 2026-11-13, BEFORE any Stage 1c run)
+
+Setup: the revised pilot (`configs/pilot_rev.yaml`, 6 layers, 24.0M params, TinyStories then Python, 2000 steps each,
+order A), seeds 0-2. New arms, all with the same architecture and compute (replay adds no tokens per step):
+
+| Arm | Definition | lrs | Runs |
+|---|---|---|---|
+| replay | in domain 2, 1 of the 8 sequences in every micro-batch (12.5%) is replaced by a TinyStories training sequence | 3e-4, 6e-4, 1.2e-3 | 9 |
+| ewc | diagonal Fisher (64 batches of 8, mean-normalised) after domain 1; penalty gradient lambda*F*(theta-theta*); lambda in {10, 1000} | 6e-4 | 6 |
+| slowmom | AdamW + slow momentum buffer (beta 0.999, alpha 1, update = (m + alpha*s)/(1+alpha)), no staggering | 6e-4 | 3 |
+| cms_slowmom | CMS 1/8/64 + the same slow momentum | 6e-4 | 3 |
+
+lambda, alpha and beta are fixed here and not tuned. Unit tests: slowmom with alpha=0 equals AdamW; EWC gradient is zero
+at the anchor.
+
+Readout: the baseline frontier (pilot_rev, order A, 3 lrs) is interpolated per seed at each arm's own final
+new-domain loss. Excess forgetting = arm forgetting minus the baseline's at that plasticity (negative = better than
+just training less). Reported only when the arm's new-domain loss lies inside that seed's baseline range, otherwise
+"outside range" with raw numbers. Seed-paired bootstrap 95% CI. Pass = excess <= -10% of the baseline's forgetting
+with CI < 0.
+- H7 (sanity): replay passes. If not, the benchmark cannot detect a known remedy and nothing else here is interpretable.
+- H3: slowmom passes. H4: cms_slowmom passes. EWC: reported per lambda, no hypothesis. CMS (existing runs) is shown through
+  the same readout for reference. No multiplicity correction; all are labelled exploratory. A null is reported as null.
