@@ -178,6 +178,34 @@ function of new-domain loss across the 3 learning rates, and evaluated at a comm
 their thresholds (>=10% reduction, CI below 0) are unchanged. Raw per-lr differences are also
 reported. Order B is reported as a robustness check, not used in the gate.
 
+## Stage 1b: test-time probe (declared 2026-11-12, BEFORE any Stage 1b run)
+
+Why: the paper's CMS updates *at test time* on the token stream; the training-step version tested
+above does not. This probe is the closest toy-scale analogue of the paper's mechanism. It is
+exploratory and reported separately from the training-time pilots.
+
+Setup (fixed here):
+- Base models: 24.0M-param GPT (pilot-revision-1 architecture), trained on TinyStories only, 2000
+  steps, lr 6e-4, seeds 0-2, one shared base per seed for every arm. The base is *not* co-trained with
+  staggered blocks, so only the test-time update rule differs between arms.
+- Stream: the first ~1.02M tokens of Python code (never seen by the base), consumed in order as 1000
+  steps of 4 consecutive 256-token windows. Each step is scored first, then used for one update.
+- Only MLP sub-blocks update at test time (everything else frozen); AdamW, no weight decay, constant lr,
+  grad clip 1.0. Arms: `frozen` (plain in-context baseline, no updates); `ttt_single` (all sub-blocks
+  update every step); `ttt_cms` (sub-blocks update every 1/8/64 steps with mean accumulated gradient);
+  `ttt_lrm` (every step, lr scaled by 1/1, 1/8, 1/64). Test-time lr in {1e-4, 3e-4, 1e-3}.
+- Metrics at steps 0/250/500/750/1000: held-out Python loss (plasticity), held-out TinyStories loss
+  (forgetting = loss at end minus loss at step 0), online pre-update stream loss.
+- Runs: 3 ttt arms x 3 lrs x 3 seeds + frozen x 3 seeds = 30.
+- H5: `ttt_cms` reduces forgetting vs `ttt_single` at matched plasticity. H6: `ttt_cms` reduces forgetting
+  vs `ttt_lrm` at matched plasticity. Matched plasticity and thresholds exactly as in Pilot revision 1:
+  forgetting interpolated across the 3 lrs as a function of final held-out Python loss, evaluated at the
+  median `ttt_single` final Python loss, only if inside every arm's range for every seed (otherwise "no
+  overlap"); >=10% relative reduction with seed-paired bootstrap CI below 0. Sanity check: every ttt arm
+  must beat `frozen` on final Python loss, else the probe is uninformative.
+- Not tested here (stated up front): nested consolidation between levels, a CMS-co-trained base,
+  pretrained backbones, 15B-token continual pre-training, the self-modifying memory.
+
 ## Results log
 
 ### Stage 0 pilot (2026-11-12) — raw runs in `results/pilot/`, readout via `scripts/analyze_pilot.py`
