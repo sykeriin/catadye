@@ -25,11 +25,15 @@ N_STEPS, BS = 1000, 4
 assert len(py_train) >= N_STEPS * BS * mc.ctx + 1, "python stream too short"
 LRS = [1e-4, 3e-4, 1e-3]
 out_dir = ROOT / "results" / "ttt"
+if "--low" in sys.argv:  # Stage 1b-low: extra lower lrs, separate dir
+    LRS = [1e-5, 3e-5]
+    out_dir = ROOT / "results" / "ttt_low"
 out_dir.mkdir(parents=True, exist_ok=True)
 
 jobs = []
 for seed in (0, 1, 2):
-    jobs.append(("frozen", 0.0, seed))
+    if "--low" not in sys.argv:
+        jobs.append(("frozen", 0.0, seed))
     for lr in LRS:
         for arm in ("ttt_single", "ttt_cms", "ttt_lrm"):
             jobs.append((arm, lr, seed))

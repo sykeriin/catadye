@@ -139,3 +139,11 @@ Setup (fixed here):
   must beat `frozen` on final Python loss, else the probe is uninformative.
 - Not tested here (stated up front): nested consolidation between levels, a CMS-co-trained base,
   pretrained backbones, 15B-token continual pre-training, the self-modifying memory.
+
+## Stage 1b-low: lower test-time learning rates (declared 2026-11-13, BEFORE any run)
+
+Motivation: at lr 1e-4 (the lowest in Stage 1b) forgetting is still 1.7-2.7 nats, so the grid never reached a mild
+regime. Design: identical to Stage 1b (same bases, stream, arms, seeds 0-2) at lr in {1e-5, 3e-5}, results in
+`results/ttt_low/`. Exploratory, no gate. Primary readout: at each lr, seed-paired difference in forgetting for
+CMS vs single-rate and CMS vs LR-matched, with bootstrap CI; "no effect" if the CI includes 0. Frozen-model numbers
+are reused from Stage 1b. Nothing else is tuned.
