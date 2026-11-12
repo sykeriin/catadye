@@ -88,6 +88,8 @@ Forgetting in nats, final Python loss in brackets (3 seeds):
 - That readout is unreliable here: Python loss barely changes with learning rate, so the matched-plasticity curves are
   nearly vertical. Comparing at the same learning rate (**post-hoc**), CMS forgets 8-31% less than single-rate updates,
   but the LR-matched control forgets 8-11% less than CMS at every learning rate.
+- **Lower learning rates (exploratory follow-up, 1e-5 and 3e-5):** same ordering in a milder regime. CMS forgets
+  36-41% less than single-rate; the LR-matched control forgets 8-9% less than CMS. Details in docs/RESULTS.md.
 - So staggering helps relative to updating everything at once, and a smaller step for the deeper blocks does at least
   as well. This is not Hope's full mechanism: no nested consolidation, and the base model was not trained with
   staggered blocks. Even the lowest learning rate here forgets 2.7 nats, so the grid never reaches a mild regime.

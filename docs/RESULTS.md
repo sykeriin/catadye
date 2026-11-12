@@ -122,3 +122,17 @@ blocks, every-step updates at lr/1, lr/8, lr/64) forgets less than CMS at every 
 benefit over single-rate updates is explained by giving deeper blocks a smaller effective step, not by the
 update schedule. Caveats: 3 seeds; one period set; base model not co-trained with staggered blocks; no nested
 consolidation; the lr grid is too high to reach small-forgetting regimes; per-lr comparisons are post-hoc.
+
+## Stage 1b-low: lower test-time learning rates (declared `prereg-stage1b-low`, exploratory, 3 seeds)
+
+Forgetting in nats (final Python loss in brackets). Paired differences with bootstrap 95% CI.
+
+| lr | single-rate | CMS 1/8/64 | LR-matched | CMS vs single | CMS vs LR-matched |
+|---|---|---|---|---|---|
+| 1e-5 | 0.85 (5.92) | 0.50 (5.95) | 0.46 (5.96) | -0.35 [-0.36, -0.34], -41% | +0.04 [+0.03, +0.04], +8% |
+| 3e-5 | 1.41 (5.86) | 0.91 (5.89) | 0.83 (5.89) | -0.50 [-0.57, -0.46], -36% | +0.08 [+0.06, +0.09], +9% |
+
+Same pattern as Stage 1b, in the milder regime: staggering forgets 36-41% less than single-rate updates, and the
+LR-matched control forgets 8-9% less than staggering. Python loss is nearly identical across arms (within 0.04), so
+this is close to a matched-plasticity comparison. Caveats: 3 seeds, bootstrap CIs over 3 pairs are narrow and
+should be read cautiously, same-seed reruns differ by ~0.1 nats, one set of periods.
