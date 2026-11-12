@@ -8,7 +8,6 @@ the pre-registration is in [PREREGISTRATION.md](PREREGISTRATION.md). Figures are
 
 ![Revised pilot: stability-plasticity frontier and order check](../figures/pilot_rev_frontier.png)
 
-## Results log
 
 ### Stage 0 pilot (2026-11-12) — raw runs in `results/pilot/`, readout via `scripts/analyze_pilot.py`
 16.1M-param GPT, TinyStories -> Python, 2000 steps/domain, 3 seeds/arm. Forgetting = rise in
