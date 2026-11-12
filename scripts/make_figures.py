@@ -192,7 +192,35 @@ def fig_matched(runs):
     return True
 
 
+# ---- 6. post-hoc drift diagnostic ----------------------------------------------------------------
+def fig_drift():
+    f = ROOT / "results" / "diagnostics.json"
+    if not f.exists():
+        return False
+    D = json.loads(f.read_text())
+    groups = ["embeddings", "attention", "layernorm", "mlp_sub0", "mlp_sub1", "mlp_sub2"]
+    names = ["embeddings", "attention", "layernorm", "MLP sub-block 1\n(period 1)", "MLP sub-block 2\n(period 8)",
+             "MLP sub-block 3\n(period 64)"]
+    fig, ax = plt.subplots(figsize=(9, 3.9))
+    w = 0.27
+    for k, (mode, lab) in enumerate([("none", "baseline"), ("cms", "CMS 1/8/64"), ("lr_matched", "LR-matched")]):
+        rows = [d for d in D if d["mode"] == mode]
+        v = np.array([[d["drift"][g] for g in groups] for d in rows])
+        fg = np.mean([d["forgetting"] for d in rows])
+        ax.bar(np.arange(6) + (k - 1) * w, v.mean(0), w, color=COL[mode], alpha=0.85,
+               label=f"{lab} (forgetting {fg:.2f}, n={len(rows)})")
+    ax.set_xticks(range(6), names, fontsize=8)
+    ax.set_ylabel("relative weight drift\n||theta_after - theta_before|| / ||theta_before||")
+    ax.set_title("Post-hoc: slow MLP blocks barely move under CMS / LR-matched, yet forgetting is unchanged",
+                 fontsize=9)
+    ax.legend(frameon=False, fontsize=8)
+    fig.savefig(FIG / "drift_diagnostic.png", dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
 if __name__ == "__main__":
+    print("drift fig:", fig_drift())
     _rev = load("pilot_rev")
     print("loss matrix:", fig_loss_matrix(_rev) if _rev else False, "; matched:", fig_matched(_rev) if _rev else False)
     fig_schedule()

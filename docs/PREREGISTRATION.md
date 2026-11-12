@@ -87,6 +87,9 @@ replay, Stage 1b, a negative-result write-up) and skip Stage 2.
 - 2026-11-11: each batch of 16 is run as 2 micro-batches of 8 (identical gradient) to fit 4 GB VRAM.
 - 2026-11-11: raw data streamed over HTTP; `datasets`/pandas/pyarrow are blocked on the dev machine.
   Pilot domains: TinyStories (first documents of the train file) then Python code (codeparrot-clean-valid).
+- 2026-11-12: the planned reproducibility check (same seed gives the same loss matrix) fails on this GPU:
+  same-seed reruns differ by up to ~0.1 nats in forgetting (non-deterministic kernels). Logged as a limitation;
+  see docs/RESULTS.md, post-hoc diagnostics.
 
 ## Pilot revision 1 (declared 2026-11-12, BEFORE any revised run)
 

@@ -43,3 +43,40 @@ The declared interpolation target (median baseline new-domain loss, 2.790) lay i
 range for every seed, so the matched-plasticity test was valid. Outcome: criteria (a) and (b) fail;
 gate = short version. Per the declaration, no further pilot revisions will be made.
 Caveats: 3 seeds; one period set (1/8/64); small scale (24.0M params); from-scratch model; no replay.
+
+### Post-hoc diagnostics (2026-11-12): where does the forgetting live? — EXPLORATORY, not pre-registered
+Models: revised-pilot recipe, order A, lr 6e-4; baseline seeds 0-2, CMS and LR-matched seed 0 only
+(n=1 each). Checkpoints after each domain; script `scripts/diagnose.py`, raw output
+`results/diagnostics.json`, figure `figures/drift_diagnostic.png`.
+
+**Drift** = ||theta_after - theta_before|| / ||theta_before|| over domain-2 training, per parameter group:
+
+| group | baseline (mean of 3) | CMS | LR-matched |
+|---|---|---|---|
+| embeddings | 0.77 | 0.75 | 0.77 |
+| attention | 0.57 | 0.56 | 0.55 |
+| layernorm | 0.06 | 0.05 | 0.05 |
+| MLP sub-block 1 (period 1) | 0.63 | 0.65 | 0.62 |
+| MLP sub-block 2 (period 8) | 0.64 | 0.22 | 0.10 |
+| MLP sub-block 3 (period 64) | 0.62 | 0.13 | 0.01 |
+| forgetting (nats) | 3.58 | 3.71 | 3.60 |
+
+Reading: the staggering does what it is meant to do (slow blocks move 3-50x less), yet forgetting is
+the same as the baseline. The LR-matched sub-block 3 is almost frozen (drift 0.01) and forgetting does
+not change. So the forgetting is not carried by the slow blocks; the parts that update every step
+(embeddings, attention, MLP sub-block 1) move 55-77% in every arm and plausibly carry it. This is
+observational: I did not run the counterfactual (freeze those parts and retrain), and a block can
+simply be unimportant for the old domain.
+
+**Revert test** (take the model after domain 2, set one group back to its domain-1 weights, re-evaluate):
+not interpretable as a localisation. Reverting a single group mixes weights from different training
+states, so most reverts make old-domain loss *worse* (recovery -10% to -60%). Only reverting embeddings
+recovers old-domain loss (+32% to +41% of the forgetting), at the price of losing the new domain (+4.5
+nats). Reported for completeness, not as evidence.
+
+**Reproducibility limit found along the way:** re-running the same seed and config does not reproduce
+the loss matrix. After domain 1 the runs agree to 0.002 nats, but forgetting after domain 2 differs by
+-0.09 to +0.11 nats between same-seed runs (5 runs; GPU kernels are not deterministic and domain 2
+rewrites most of the model). Effects below ~0.1 nats per run are therefore not resolvable; the
+pre-registered 10% bar (~0.36 nats) is well above this, so the gate decisions stand, and the CIs above
+already include this noise because every run is an independent draw.
