@@ -79,9 +79,12 @@ def run(cfg: dict, out_dir: str | Path = "results") -> dict:
             so.step(gstep)
             if (s + 1) % 200 == 0:
                 log.append(dict(domain=d, step=s + 1, loss=loss.item()))
-        # flush any partially accumulated slow groups so domain boundaries are clean
         for j, dj in enumerate(domains):
             R[i, j] = evaluate(model, ev[dj], device)
+        if cfg.get("ckpt_dir"):
+            ck = Path(cfg["ckpt_dir"])
+            ck.mkdir(parents=True, exist_ok=True)
+            torch.save(model.state_dict(), ck / f"{cfg['mode']}_s{cfg['seed']}_d{i + 1}.pt")
     wall = time.time() - t0
     res = dict(
         name=cfg["name"], seed=cfg["seed"], mode=cfg["mode"], domains=domains, cfg=cfg,
