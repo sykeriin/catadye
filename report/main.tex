@@ -175,7 +175,11 @@ and interpolation amplifies noise (CMS sd 0.92).
 \textbf{Post-hoc, same learning rate} (seed-paired; with 3 seeds the bootstrap has 27 distinct resamples, so intervals are coarse):
 CMS forgets $31\%$, $11\%$ and $8\%$ less than single-rate updates at the three learning rates (CIs exclude zero) with equal or better Python loss, matching the direction claimed for CMS.
 The LR-matched control, however, forgets $36\%$, $20\%$ and $16\%$ less than single-rate and $8$--$11\%$ less than CMS at every learning rate (Figure~\ref{fig:ttt}). Even the lowest rate forgets 2.7 nats with single-rate
-updates, so the grid never reaches a mild regime.
+updates, so this grid never reaches a mild regime.
+
+	extbf{Lower learning rates (exploratory follow-up).} I therefore added $10^{-5}$ and $3	imes10^{-5}$ (18 runs, declared and tagged as 	exttt{prereg-stage1b-low} before running; no gate).
+Forgetting (final Python loss) is 0.85 (5.92), 0.50 (5.95), 0.46 (5.96) for single-rate, CMS and LR-matched at $10^{-5}$, and 1.41 (5.86), 0.91 (5.89), 0.83 (5.89) at $3	imes10^{-5}$.
+CMS forgets $41\%$ and $36\%$ less than single-rate; the LR-matched control forgets $8\%$ and $9\%$ less than CMS; all intervals exclude zero, with the same 3-seed caveat. The ordering is unchanged in the milder regime.
 
 \begin{figure}[t]\centering
 \includegraphics[width=0.95\linewidth]{../figures/ttt_probe.png}
