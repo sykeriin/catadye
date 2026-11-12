@@ -10,6 +10,75 @@ staggers updates per *optimizer step* during training ("CMS-inspired"). It neith
 refutes the paper's claims. A toy-scale paper-style probe (Stage 1b) is exploratory and reported
 separately.
 
+## Status
+
+| Stage | State |
+|---|---|
+| Literature check, plan, pre-registration | done (`prereg-v1`) |
+| Stage 0 pilot (16.1M params) | done, **negative**: CMS did not reduce forgetting |
+| Pilot revision 1 (bigger staggered share, lr sweep, order check) | declared (`prereg-pilot-rev1`), running |
+| Stage 1 main grid, Stage 1b test-time probe, Stage 2 LoRA | not started; gated on the pilot |
+
+## What is being tested
+
+Nested Learning's Continuum Memory System (CMS) chains MLP blocks that update at different
+frequencies. This repo asks whether *update-frequency staggering alone* reduces forgetting when a
+plain transformer is trained on a sequence of domains. Every arm has the same architecture, so
+parameters and forward FLOPs are identical; arms differ only in *how each sub-block is updated*.
+
+```mermaid
+flowchart LR
+    x([residual stream]) --> A[attention]
+    A --> S1["MLP sub-block 1<br/>period 1"]
+    S1 --> S2["MLP sub-block 2<br/>period 8"]
+    S2 --> S3["MLP sub-block 3<br/>period 64"]
+    S3 --> y([next layer])
+```
+
+![Update schedules: CMS vs the LR-matched control](figures/update_schedule.png)
+
+The **LR-matched control** is the key comparison. Under AdamW, updating a block every *k* steps moves it
+roughly 1/*k* as far as updating it every step, so a CMS gain could just be a smaller learning rate.
+The control uses the same blocks at `lr/k`, updated every step.
+
+## Study flow
+
+```mermaid
+flowchart TD
+    P["Pre-register hypotheses and kill criteria<br/>(prereg-v1)"] --> S0["Stage 0 pilot: baseline vs CMS vs LR-matched"]
+    S0 --> G{"CMS beats LR-matched control<br/>by >=10%, CI below 0?"}
+    G -- no --> SH["Short version: arms 1-5 + replay,<br/>test-time probe, negative-result write-up"]
+    G -- yes --> FULL["Full plan: Stage 1 grid (5 seeds),<br/>pretrained-model check, Stage 1b, Stage 2 LoRA"]
+    S0 -. "weaknesses found" .-> R1["Pilot revision 1 (declared before running):<br/>lr sweep, bigger staggered share, order check"]
+    R1 --> G
+```
+
+## Results so far
+
+Pilot 1 (16.1M params, TinyStories then Python, 3 seeds). Forgetting is the rise in TinyStories
+eval loss after training on code; plasticity (new-domain loss) is matched across arms.
+
+![Pilot 1 results](figures/pilot1_results.png)
+
+Details, caveats and the full table are in the [Results log](#results-log) below. Figures are
+regenerated from the raw run files in `results/` by `python scripts/make_figures.py`.
+
+## Reproduce
+
+```bash
+python -m venv .venv && .venv/Scripts/pip install torch --index-url https://download.pytorch.org/whl/cu124
+.venv/Scripts/pip install numpy tiktoken pyyaml scipy matplotlib pytest
+.venv/Scripts/python -m pytest                      # unit tests
+.venv/Scripts/python scripts/run_pilot.py           # pilot 1 (9 runs, ~70 min on an RTX 3050 4 GB)
+.venv/Scripts/python scripts/run_pilot_rev.py       # revised pilot (36 runs)
+.venv/Scripts/python scripts/analyze_pilot.py       # pre-registered readout
+.venv/Scripts/python scripts/make_figures.py        # figures/
+```
+
+Data is streamed over HTTP on first use and cached in `data/` (git-ignored).
+
+---
+
 ## Pre-registration (written before any experiment is run)
 
 Status: PRE-REGISTERED. Changes after the first run go in the Deviations log at the bottom, with

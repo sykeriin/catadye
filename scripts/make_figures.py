@@ -1,0 +1,138 @@
+"""Regenerate every figure in README from raw results. Usage: python scripts/make_figures.py"""
+import json
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from catadye.metrics import forgetting, new_domain_loss  # noqa: E402
+
+FIG = ROOT / "figures"
+FIG.mkdir(exist_ok=True)
+COL = {"none": "#6b7280", "cms": "#d9480f", "lr_matched": "#1c7ed6"}
+LAB = {"none": "baseline", "cms": "CMS 1/8/64", "lr_matched": "LR-matched"}
+plt.rcParams.update({"figure.facecolor": "white", "axes.facecolor": "white", "axes.spines.top": False,
+                     "axes.spines.right": False, "font.size": 10, "axes.grid": True, "grid.alpha": 0.25})
+
+
+def load(d):
+    runs = []
+    for f in sorted((ROOT / "results" / d).glob("*.json")):
+        runs.append(json.loads(f.read_text()))
+    return runs
+
+
+# ---- 1. update schedule diagram ------------------------------------------------------------
+def fig_schedule():
+    T = 96
+    fig, axes = plt.subplots(2, 1, figsize=(8, 3.6), sharex=True, gridspec_kw={"hspace": 0.5})
+    for ax, mode in zip(axes, ["CMS (staggered)", "LR-matched control"]):
+        for row, (p, name) in enumerate([(1, "sub-block 1 (period 1)"), (8, "sub-block 2 (period 8)"),
+                                         (64, "sub-block 3 (period 64)")]):
+            y = 2 - row
+            if mode.startswith("CMS"):
+                ups = list(range(p, T + 1, p))
+            else:
+                ups = list(range(1, T + 1))
+            ax.vlines(ups, y - 0.3, y + 0.3, color=COL["cms" if mode.startswith("CMS") else "lr_matched"],
+                      lw=1.2 if p > 1 or not mode.startswith("CMS") else 0.8)
+            if mode.startswith("LR") and p > 1:
+                ax.text(T + 1, y, f"lr / {p}", va="center", fontsize=8, color="#444")
+            ax.text(-1.5, y, name, ha="right", va="center", fontsize=8)
+        ax.set_yticks([])
+        ax.set_title(mode + (": gradients accumulate, then one update" if mode.startswith("CMS")
+                             else ": every step, but smaller step size"), fontsize=9, loc="left")
+        ax.set_xlim(0, T + 8)
+    axes[1].set_xlabel("optimizer step (tick = parameters updated)")
+    fig.savefig(FIG / "update_schedule.png", dpi=160, bbox_inches="tight")
+    plt.close(fig)
+
+
+# ---- 2. pilot 1 results --------------------------------------------------------------------
+def fig_pilot1(runs):
+    by = defaultdict(list)
+    for r in runs:
+        R = np.array(r["R"])
+        by[r["mode"]].append((forgetting(R), new_domain_loss(R), r["R"]))
+    fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.4), gridspec_kw={"wspace": 0.38})
+    arms = ["none", "cms", "lr_matched"]
+    for ax, idx, title in ((axes[0], 0, "Forgetting (nats, lower = better)"),
+                           (axes[1], 1, "New-domain loss (plasticity)")):
+        for i, a in enumerate(arms):
+            v = np.array([t[idx] for t in by[a]])
+            ax.bar(i, v.mean(), color=COL[a], alpha=0.35, width=0.6)
+            ax.scatter(np.full(len(v), i) + np.linspace(-0.12, 0.12, len(v)), v, color=COL[a], s=22, zorder=3)
+        ax.set_xticks(range(3), [LAB[a] for a in arms], fontsize=8)
+        ax.set_title(title, fontsize=9)
+    axes[0].set_ylim(0, None)
+    axes[1].set_ylim(2.4, 2.9)
+    ax = axes[2]
+    for a in arms:
+        pts = np.array([[t[1], t[0]] for t in by[a]])
+        ax.scatter(pts[:, 0], pts[:, 1], color=COL[a], label=LAB[a], s=28)
+    ax.set_xlabel("new-domain loss")
+    ax.set_ylabel("forgetting")
+    ax.set_title("Per-seed points", fontsize=9)
+    ax.legend(fontsize=8, frameon=False)
+    fig.suptitle("Pilot 1 (16.1M params, TinyStories -> Python, 3 seeds): CMS did not reduce forgetting",
+                 fontsize=10, y=1.03)
+    fig.savefig(FIG / "pilot1_results.png", dpi=160, bbox_inches="tight")
+    plt.close(fig)
+
+
+# ---- 3. revised pilot: stability-plasticity frontier + order check ------------------------------
+def fig_rev(runs):
+    A = [r for r in runs if r["cfg"].get("order") == "A"]
+    B = [r for r in runs if r["cfg"].get("order") == "B"]
+    if not A:
+        return False
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 3.8))
+    ax = axes[0]
+    for a in ["none", "cms", "lr_matched"]:
+        lrs = sorted({r["cfg"]["lr"] for r in A if r["mode"] == a})
+        xs, ys, xe, ye = [], [], [], []
+        for lr in lrs:
+            v = [(new_domain_loss(np.array(r["R"])), forgetting(np.array(r["R"])))
+                 for r in A if r["mode"] == a and r["cfg"]["lr"] == lr]
+            v = np.array(v)
+            xs.append(v[:, 0].mean()); ys.append(v[:, 1].mean())
+            xe.append(v[:, 0].std(ddof=1) if len(v) > 1 else 0); ye.append(v[:, 1].std(ddof=1) if len(v) > 1 else 0)
+        ax.errorbar(xs, ys, xerr=xe, yerr=ye, color=COL[a], marker="o", ms=5, lw=1.4, capsize=2, label=LAB[a])
+        for x, y, lr in zip(xs, ys, lrs):
+            ax.annotate(f"{lr:g}", (x, y), textcoords="offset points", xytext=(4, 4), fontsize=6.5, color=COL[a])
+    ax.set_xlabel("new-domain loss (plasticity; lower = learns more)")
+    ax.set_ylabel("forgetting (nats; lower = better)")
+    ax.set_title("Stability-plasticity frontier, order A (labels = lr)", fontsize=9)
+    ax.legend(frameon=False, fontsize=8)
+    ax = axes[1]
+    if B:
+        for i, a in enumerate(["none", "cms", "lr_matched"]):
+            v = np.array([forgetting(np.array(r["R"])) for r in B if r["mode"] == a])
+            if len(v):
+                ax.bar(i, v.mean(), color=COL[a], alpha=0.35, width=0.6)
+                ax.scatter(np.full(len(v), i) + np.linspace(-0.12, 0.12, len(v)), v, color=COL[a], s=22, zorder=3)
+        ax.set_xticks(range(3), [LAB[a] for a in ["none", "cms", "lr_matched"]], fontsize=8)
+    ax.set_title("Reversed order B (Python -> TinyStories), lr 6e-4", fontsize=9)
+    ax.set_ylabel("forgetting")
+    share = np.mean([r["sub_param_share"] for r in runs])
+    fig.suptitle(f"Revised pilot ({runs[0]['n_params']/1e6:.1f}M params, staggered share {share:.0%})",
+                 fontsize=10, y=1.03)
+    fig.savefig(FIG / "pilot_rev_frontier.png", dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
+if __name__ == "__main__":
+    fig_schedule()
+    p1 = load("pilot")
+    if p1:
+        fig_pilot1(p1)
+    rev = load("pilot_rev")
+    print("schedule: ok; pilot1:", bool(p1), "; rev runs:", len(rev), "; rev fig:", fig_rev(rev) if rev else False)
