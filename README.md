@@ -145,10 +145,15 @@ Limits: 3 seeds, one period set (1/8/64), small from-scratch models, no replay b
 | Pilot revision 1: bigger staggered share, learning-rate sweep, order check | done, negative, tag `prereg-pilot-rev1` |
 | Stage 1b: test-time probe | done (`prereg-stage1b`): declared hypotheses fail; post-hoc per-lr result above |
 | Post-hoc diagnostics: where does the forgetting live? | done, exploratory (drift figure above) |
-| Main grid (replay, EWC, slow momentum), LoRA stage | not started |
+| Report | done: [report/main.pdf](report/main.pdf) |
+| Main grid (replay, EWC, slow momentum), LoRA stage | not run (see report, Sec. 5) |
 
 Every stage's design was committed and tagged **before** its runs. The criteria, thresholds and deviations are in
 [docs/PREREGISTRATION.md](docs/PREREGISTRATION.md).
+
+## The report
+
+A 7-page paper-style write-up with all methods, results, limitations and references: [report/main.pdf](report/main.pdf) (LaTeX source: [report/main.tex](report/main.tex)).
 
 ## Run it
 
