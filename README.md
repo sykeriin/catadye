@@ -61,4 +61,30 @@ replay, Stage 1b, a negative-result write-up) and skip Stage 2.
 `results/` raw per-run JSONL (not edited by hand), `report/` write-up.
 
 ## Deviations log
-(empty)
+- 2026-11-11: pilot model has 16.1M parameters, not ~10M (GPT-2 vocab embeddings are ~13M of that).
+- 2026-11-11: each batch of 16 is run as 2 micro-batches of 8 (identical gradient) to fit 4 GB VRAM.
+- 2026-11-11: raw data streamed over HTTP; `datasets`/pandas/pyarrow are blocked on the dev machine.
+  Pilot domains: TinyStories (first documents of the train file) then Python code (codeparrot-clean-valid).
+
+## Results log
+
+### Stage 0 pilot (2026-11-12) — raw runs in `results/pilot/`, readout via `scripts/analyze_pilot.py`
+16.1M-param GPT, TinyStories -> Python, 2000 steps/domain, 3 seeds/arm. Forgetting = rise in
+TinyStories eval loss after training on code (nats); lower is better.
+
+| arm | forgetting | new-domain loss | tokens/s | updated fraction/step |
+|---|---|---|---|---|
+| baseline | 3.549 ± 0.189 | 2.806 ± 0.009 | 35.7k | 1.000 |
+| CMS 1/8/64 | 3.726 ± 0.100 | 2.795 ± 0.009 | 36.9k | 0.919 |
+| LR-matched | 3.622 ± 0.043 | 2.786 ± 0.013 | 36.7k | 1.000 |
+
+Plasticity was matched (new-domain loss within 1%) in all comparisons.
+- CMS vs baseline: forgetting +0.178 nats [+0.025, +0.334], i.e. CMS forgot ~5% **more**.
+- CMS vs LR-matched: +0.104 [+0.026, +0.179], ~3% more.
+- Pre-registered criteria (a) and (b) both fail: no reduction at all, let alone the 10% minimum.
+  Under the kill criteria the "frequency per se" hypothesis is falsified at this scale.
+
+Caveats: 3 seeds (bootstrap has 27 distinct resamples, so CIs are coarse); one learning rate and
+one domain order; the staggered sub-blocks are only ~13% of the parameters (embeddings are ~80%),
+so the intervention touches little of the model; forgetting is extreme (>3 nats) in this regime.
+Per the decision gate, the short version of the plan applies unless the pilot is revised.
