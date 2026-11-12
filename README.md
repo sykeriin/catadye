@@ -66,6 +66,19 @@ Forgetting in nats at matched new-domain loss (2.79); lower is better.
 - Reversing the domain order gives the same picture. The first pilot (16.1M params) was also negative.
 - Full numbers: [docs/RESULTS.md](docs/RESULTS.md).
 
+## Why is there no effect? (post-hoc, exploratory)
+
+I measured how far each part of the model moves while it learns the second domain. The staggering works as
+intended: under CMS and the LR-matched control the two slow MLP blocks barely move. Forgetting is unchanged anyway,
+so it is not carried by those blocks. The parts that update every step (embeddings, attention, the first MLP block)
+move 55-77% in every arm and plausibly carry it.
+
+![Weight drift per parameter group](figures/drift_diagnostic.png)
+
+This is observational and was not pre-registered; CMS and LR-matched have one seed each. I did not run the
+counterfactual (freeze those parts and retrain). Details, and a reproducibility limit I found (same-seed reruns
+differ by up to ~0.1 nats in forgetting), are in [docs/RESULTS.md](docs/RESULTS.md).
+
 ## What this does and does not show
 
 It shows that **per-step update-frequency staggering during training is not the active ingredient** at this scale.
@@ -104,8 +117,8 @@ Limits: 3 seeds, one period set (1/8/64), small from-scratch models, no replay b
 | Plan and pre-registration | done, tag `prereg-v1` |
 | Pilot 1 (16.1M params) | done, negative |
 | Pilot revision 1: bigger staggered share, learning-rate sweep, order check | done, negative, tag `prereg-pilot-rev1` |
-| Stage 1b: test-time probe | declared (`prereg-stage1b`), models training, then 30 runs |
-| Post-hoc diagnostics: where does the forgetting live? | queued, exploratory |
+| Stage 1b: test-time probe | declared (`prereg-stage1b`), 30 runs in progress |
+| Post-hoc diagnostics: where does the forgetting live? | done, exploratory (drift figure above) |
 | Main grid (replay, EWC, slow momentum), LoRA stage | not started |
 
 Every stage's design was committed and tagged **before** its runs. The criteria, thresholds and deviations are in
