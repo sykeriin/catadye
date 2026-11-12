@@ -219,7 +219,46 @@ def fig_drift():
     return True
 
 
+# ---- 7. Stage 1b test-time probe -----------------------------------------------------------------
+def fig_ttt():
+    runs = load("ttt")
+    if len(runs) < 30:
+        return False
+    arms = {"ttt_single": ("#6b7280", "single-rate updates"), "ttt_cms": (COL["cms"], "CMS 1/8/64"),
+            "ttt_lrm": (COL["lr_matched"], "LR-matched")}
+    fig, axes = plt.subplots(1, 2, figsize=(11, 3.9))
+    ax = axes[0]
+    for a, (c, lab) in arms.items():
+        pts = []
+        for lr in (1e-4, 3e-4, 1e-3):
+            v = [(r["curve"][-1]["new"], r["curve"][-1]["old"] - r["curve"][0]["old"])
+                 for r in runs if r["arm"] == a and r["lr"] == lr]
+            pts.append((np.mean([t[0] for t in v]), np.mean([t[1] for t in v]), lr))
+        ax.plot([p[0] for p in pts], [p[1] for p in pts], "-o", color=c, ms=5, label=lab)
+        for x, y, lr in pts:
+            ax.annotate(f"{lr:g}", (x, y), textcoords="offset points", xytext=(5, 4), fontsize=7, color=c)
+    ax.set_xlabel("final Python loss (plasticity)")
+    ax.set_ylabel("TinyStories loss increase (forgetting, nats)")
+    ax.set_title("Same learning rate: CMS forgets less than single-rate,\nLR-matched forgets less still (labels = lr)",
+                 fontsize=9)
+    ax.legend(frameon=False, fontsize=8)
+    ax = axes[1]
+    for a, (c, lab) in arms.items():
+        cs = [r["curve"] for r in runs if r["arm"] == a and r["lr"] == 3e-4]
+        steps = [p["step"] for p in cs[0]]
+        ax.plot(steps, [np.mean([cv[i]["old"] for cv in cs]) for i in range(len(steps))], "-o", color=c, ms=4,
+                label=lab)
+    ax.set_xlabel("test-time steps (4 x 256 tokens each)")
+    ax.set_ylabel("held-out TinyStories loss")
+    ax.set_title("Old-domain loss while adapting to Python (lr 3e-4, 3 seeds)", fontsize=9)
+    fig.suptitle("Stage 1b: test-time updates of the MLP blocks on a Python stream", fontsize=10, y=1.03)
+    fig.savefig(FIG / "ttt_probe.png", dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
 if __name__ == "__main__":
+    print("ttt fig:", fig_ttt())
     print("drift fig:", fig_drift())
     _rev = load("pilot_rev")
     print("loss matrix:", fig_loss_matrix(_rev) if _rev else False, "; matched:", fig_matched(_rev) if _rev else False)

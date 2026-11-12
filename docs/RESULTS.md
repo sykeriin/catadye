@@ -80,3 +80,45 @@ the loss matrix. After domain 1 the runs agree to 0.002 nats, but forgetting aft
 rewrites most of the model). Effects below ~0.1 nats per run are therefore not resolvable; the
 pre-registered 10% bar (~0.36 nats) is well above this, so the gate decisions stand, and the CIs above
 already include this noise because every run is an independent draw.
+
+### Stage 1b: test-time probe (2026-11-12) — raw runs in `results/ttt/`, readout via `scripts/analyze_ttt.py`
+Declared in `docs/PREREGISTRATION.md` (tag `prereg-stage1b`) before any run. Base: 24.0M-param GPT trained on
+TinyStories only (3 seeds). Stream: ~1M tokens of Python, 1000 steps of 4x256 tokens; only MLP sub-blocks update
+(AdamW, constant lr, no weight decay). Frozen baseline (no updates): held-out Python loss 8.60, no forgetting.
+Forgetting = held-out TinyStories loss at the end minus at step 0 (base: 3.12). 30 runs, 3 seeds.
+
+Per-learning-rate means over 3 seeds (final held-out Python loss, forgetting in nats):
+
+| lr | ttt_single | ttt_cms 1/8/64 | ttt_lrm |
+|---|---|---|---|
+| 1e-4 | 5.796, +2.660 | 5.795, +1.844 | 5.810, +1.704 |
+| 3e-4 | 5.875, +3.557 | 5.786, +3.156 | 5.798, +2.854 |
+| 1e-3 | 5.982, +4.601 | 5.921, +4.222 | 5.931, +3.887 |
+
+**Declared readout (matched plasticity by interpolation across the 3 lrs; target 5.867, inside every arm's range):**
+- Sanity check (every arm beats frozen at every lr): PASS.
+- Forgetting at matched plasticity: single +3.43 ± 0.08, CMS +3.26 ± 0.92, LR-matched +2.70 ± 0.81.
+- **H5 (CMS vs single): -0.17 [-0.74, +0.81] (-5.0%): FAIL**, inconclusive (CI spans zero widely).
+- **H6 (CMS vs LR-matched): +0.56 [+0.40, +0.70] (+20.8%): FAIL**, CMS forgets *more*, CI excludes zero.
+
+**Why the declared construction is unreliable here (limitation):** final Python loss barely changes with
+test-time lr (5.79-5.98) and is not monotone (higher lr gives a worse Python loss for `ttt_single`), so the
+forgetting-vs-plasticity curves are nearly vertical and interpolation at a common Python loss amplifies noise
+(CMS sd 0.92). Even the lowest lr (1e-4) forgets 2.7 nats for single-rate updates, so the declared lr grid does
+not reach a mild-forgetting regime.
+
+**Post-hoc (not pre-registered) per-lr paired comparison, same lr, 3 seeds** (seed-paired bootstrap; with 3 seeds
+the bootstrap has 27 distinct resamples, so CIs are coarse). Python-loss difference in the last column:
+
+| lr | CMS vs single | LR-matched vs single | CMS vs LR-matched | Python-loss diff, CMS vs single |
+|---|---|---|---|---|
+| 1e-4 | -0.82 [-0.86, -0.76] (-31%) | -0.96 (-36%) | +0.14 [+0.13, +0.15] (+8%) | -0.001 |
+| 3e-4 | -0.40 [-0.83, -0.16] (-11%) | -0.70 (-20%) | +0.30 [+0.25, +0.35] (+11%) | -0.088 |
+| 1e-3 | -0.38 [-0.62, -0.15] (-8%) | -0.71 (-16%) | +0.34 [+0.09, +0.62] (+9%) | -0.060 |
+
+Reading: at the same learning rate, staggered test-time updates forget 8-31% less than single-rate updates
+with equal-or-better Python loss, which is the direction the paper claims. But the LR-matched control (same
+blocks, every-step updates at lr/1, lr/8, lr/64) forgets less than CMS at every lr, by 8-11%. So the
+benefit over single-rate updates is explained by giving deeper blocks a smaller effective step, not by the
+update schedule. Caveats: 3 seeds; one period set; base model not co-trained with staggered blocks; no nested
+consolidation; the lr grid is too high to reach small-forgetting regimes; per-lr comparisons are post-hoc.
