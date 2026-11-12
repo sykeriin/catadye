@@ -7,7 +7,8 @@ A pre-registered, small-scale test of an idea from Google's [Nested Learning](ht
 > **Result so far: no.** In a small transformer trained on one domain after another, MLP blocks that update
 > every 1 / 8 / 64 steps forget no less than a normal model once you compare at the same amount of learning.
 > They behave like a smaller learning rate. Two pilots, both negative. A test-time probe, closer to what the
-> paper actually does, is running next.
+> paper actually does, shows the direction the paper claims (staggering forgets less than single-rate updates)
+> but a plain learning-rate control forgets even less.
 
 ![Forgetting vs learning on the new domain: all three arms trace the same line](figures/pilot_rev_frontier.png)
 
@@ -66,6 +67,31 @@ Forgetting in nats at matched new-domain loss (2.79); lower is better.
 - Reversing the domain order gives the same picture. The first pilot (16.1M params) was also negative.
 - Full numbers: [docs/RESULTS.md](docs/RESULTS.md).
 
+## Test-time probe (Stage 1b)
+
+Closer to the paper: take a model trained on TinyStories, stream ~1M tokens of Python through it, and update only the
+MLP blocks as the tokens arrive. Same blocks, three update rules: every block every step, CMS staggering (1 / 8 / 64
+steps), and the LR-matched control.
+
+![Test-time probe: forgetting vs plasticity and the old-domain loss over the stream](figures/ttt_probe.png)
+
+Forgetting in nats, final Python loss in brackets (3 seeds):
+
+| lr | single-rate | CMS 1/8/64 | LR-matched |
+|---|---|---|---|
+| 1e-4 | 2.66 (5.80) | 1.84 (5.80) | 1.70 (5.81) |
+| 3e-4 | 3.56 (5.88) | 3.16 (5.79) | 2.85 (5.80) |
+| 1e-3 | 4.60 (5.98) | 4.22 (5.92) | 3.89 (5.93) |
+
+- **Pre-registered readout: both hypotheses fail.** CMS vs single-rate: -5%, CI spans zero. CMS vs LR-matched: CMS
+  forgets 21% *more*, CI excludes zero.
+- That readout is unreliable here: Python loss barely changes with learning rate, so the matched-plasticity curves are
+  nearly vertical. Comparing at the same learning rate (**post-hoc**), CMS forgets 8-31% less than single-rate updates,
+  but the LR-matched control forgets 8-11% less than CMS at every learning rate.
+- So staggering helps relative to updating everything at once, and a smaller step for the deeper blocks does at least
+  as well. This is not Hope's full mechanism: no nested consolidation, and the base model was not trained with
+  staggered blocks. Even the lowest learning rate here forgets 2.7 nats, so the grid never reaches a mild regime.
+
 ## Why is there no effect? (post-hoc, exploratory)
 
 I measured how far each part of the model moves while it learns the second domain. The staggering works as
@@ -95,7 +121,7 @@ flowchart LR
         C5["Test-time updates on a pretrained<br/>Llama, 15B extra tokens"]
     end
     C1 --> T1["Per-step staggering in training<br/>2 pilots: no benefit"]
-    C1 --> T2["Test-time staggering, small<br/>from-scratch model (Stage 1b)"]
+    C1 --> T2["Test-time staggering, small from-scratch<br/>model: beats single-rate, not LR-matched"]
     C4 --> T3["Slow-momentum AdamW arm"]
     C2 --> N1["not tested"]
     C3 --> N2["not tested (out of scope)"]
@@ -103,12 +129,12 @@ flowchart LR
     classDef done fill:#d3f9d8,stroke:#2f9e44,color:#1b1b1b
     classDef plan fill:#fff3bf,stroke:#f08c00,color:#1b1b1b
     classDef none fill:#e9ecef,stroke:#868e96,color:#1b1b1b
-    class T1 done
-    class T2,T3 plan
+    class T1,T2 done
+    class T3 plan
     class N1,N2,N3 none
 ```
 
-Limits: 3 seeds, one period set (1/8/64), small from-scratch models, no replay baseline yet.
+Limits: 3 seeds, one period set (1/8/64), small from-scratch models, no replay baseline yet; same-seed reruns differ by up to ~0.1 nats.
 
 ## Status
 
@@ -117,7 +143,7 @@ Limits: 3 seeds, one period set (1/8/64), small from-scratch models, no replay b
 | Plan and pre-registration | done, tag `prereg-v1` |
 | Pilot 1 (16.1M params) | done, negative |
 | Pilot revision 1: bigger staggered share, learning-rate sweep, order check | done, negative, tag `prereg-pilot-rev1` |
-| Stage 1b: test-time probe | declared (`prereg-stage1b`), 30 runs in progress |
+| Stage 1b: test-time probe | done (`prereg-stage1b`): declared hypotheses fail; post-hoc per-lr result above |
 | Post-hoc diagnostics: where does the forgetting live? | done, exploratory (drift figure above) |
 | Main grid (replay, EWC, slow momentum), LoRA stage | not started |
 
