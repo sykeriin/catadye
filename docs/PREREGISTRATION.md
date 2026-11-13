@@ -171,3 +171,11 @@ with CI < 0.
 - H7 (sanity): replay passes. If not, the benchmark cannot detect a known remedy and nothing else here is interpretable.
 - H3: slowmom passes. H4: cms_slowmom passes. EWC: reported per lambda, no hypothesis. CMS (existing runs) is shown through
   the same readout for reference. No multiplicity correction; all are labelled exploratory. A null is reported as null.
+
+## Stage 1d: seeds 3 and 4 for the revised-pilot grid (declared 2026-11-13, BEFORE any Stage 1d run)
+
+Purpose: the original plan called for 5 seeds on the core arms; the revised pilot used 3. Add seeds 3 and 4 to the
+revised pilot exactly as run before (`scripts/run_pilot_rev.py --seeds 3 4`: baseline, CMS, LR-matched x 3 lrs, order A,
+plus the middle lr in order B; 24 runs). No design, constants or criteria change. The pre-registered readout
+(`scripts/analyze_pilot_rev.py`, 10% reduction with seed-paired CI < 0) is applied to all 5 seeds. Both the 3-seed result
+already reported and the 5-seed result are reported; if they disagree, both stand and the disagreement is stated.
