@@ -55,7 +55,8 @@ def run(cfg: dict, out_dir: str | Path = "results") -> dict:
         return StaggeredOptimizer(model, mode=cfg["mode"], periods=cfg.get("periods", (1, 8, 64)), lr=cfg["lr"],
                                   weight_decay=cfg.get("weight_decay", 0.1),
                                   **({"optimizer_cls": SlowMomAdamW, "optimizer_kwargs": dict(
-                                      slow_beta=cfg.get("slow_beta", 0.999), alpha=cfg.get("slow_alpha", 1.0))}
+                                      slow_beta=cfg.get("slow_beta", 0.999), alpha=cfg.get("slow_alpha", 1.0),
+                                      slow_norm=cfg.get("slow_norm", False))}
                                      if cfg.get("slowmom") else {}))
     so = make_opt()
     domains = cfg["domains"]

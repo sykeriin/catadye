@@ -179,3 +179,36 @@ revised pilot exactly as run before (`scripts/run_pilot_rev.py --seeds 3 4`: bas
 plus the middle lr in order B; 24 runs). No design, constants or criteria change. The pre-registered readout
 (`scripts/analyze_pilot_rev.py`, 10% reduction with seed-paired CI < 0) is applied to all 5 seeds. Both the 3-seed result
 already reported and the 5-seed result are reported; if they disagree, both stand and the disagreement is stated.
+
+## Stage 1e: stable slow momentum and the 2x2 at 5 seeds (declared 2026-11-13, BEFORE any Stage 1e run)
+
+**Why.** Stage 1c's slow-momentum arms diverged (old-domain loss in the thousands), so H3 and H4 were not assessed.
+Diagnosis (exploratory, `scratchpad` check on the pilot recipe, seed 0, domain 1): the slow term `alpha*s/sqrt(v)`
+grew from 1.0 at step 10 to 299 at step 399. `s` is a slow EMA (beta 0.999) of gradients, while `sqrt(v)` tracks a fast
+EMA (beta 0.95). When gradients shrink, the slow term outgrows the fast denominator without bound.
+
+**Fix (the only change to the method).** `SlowMomAdamW(slow_norm=True)`: the slow term is divided by its own long-horizon
+second moment `sqrt(vs)` (EMA with beta 0.999, same as `s`):
+update = (m/sqrt(v) + alpha * s/sqrt(vs)) / (1 + alpha), decoupled weight decay.
+By Cauchy-Schwarz with equal betas, |s|/sqrt(vs) <= 1 at every step. Checked: max 1.0 over 400 steps; unit test
+`test_slow_norm_bounds_slow_term` passes; alpha=0 still equals AdamW. The unnormalised variant (Stage 1c) is kept as-is.
+This is a deviation from the declared M3-style momentum; it is a stability fix, not a tuned constant (alpha=1, beta 0.999 unchanged).
+
+**Design.** Factor 2 (CMS yes/no) x 2 (slow momentum yes/no, `slow_norm=True`), one learning rate 6e-4, order A,
+seeds 0-4, same pilot recipe (24.0M params). 4 arms x 5 seeds = 20 runs in total, 10 new (about 2-3 hours at 12-18 min each). Baseline and CMS arms reuse
+the revised-pilot runs at lr 6e-4, order A, seeds 0-4 (`results/pilot_rev/`), so only the two slow-momentum arms (10 runs) are new.
+Reuse is valid because the recipe and code path for those arms are identical.
+
+**Hypotheses.**
+- H3: slow momentum reduces forgetting vs. the same arm without it (none vs. slow momentum, and CMS vs. CMS + slow momentum). Pass = mean new-domain loss
+  within 2% of the reference AND forgetting reduction >= 10% with seed-paired CI < 0.
+- H4: the CMS x slow-momentum interaction term differs from zero (CI excludes 0).
+- Stability (pre-declared check): an arm is reported as unstable if any run's old-domain loss at end of domain 2 is more
+  than 2x its baseline. Unstable arms do not get H3/H4 verdicts.
+- The single learning rate means the matched-plasticity frontier is not measured; claims are restricted to the
+  new-domain-loss band check above. This is the declared limitation.
+
+**Sanity.** Baseline and CMS forgetting must match the revised-pilot 5-seed values (3.59 and 3.65) to within 0.1 nats
+(same-seed GPU nondeterminism is about 0.1 nats); otherwise the reuse is invalid.
+
+**Reporting.** Report every arm including any that fail the stability check. Do not add seeds or change constants after seeing results.

@@ -35,3 +35,22 @@ def test_ewc_zero_at_anchor_and_pulls_back():
         m.weight.add_(1.0)
     ewc_grad_add(m, F, anchor, 10.0)
     assert torch.allclose(m.weight.grad, torch.full_like(m.weight, 10.0))
+
+
+def test_slow_norm_bounds_slow_term():
+    # With slow_norm, |s| / sqrt(vs) <= 1 (Cauchy-Schwarz, same beta), so the slow term cannot outgrow
+    # the fast denominator when gradients shrink (the failure of the unnormalised variant).
+    from catadye.slowmom import SlowMomAdamW
+    torch.manual_seed(0)
+    p = torch.nn.Parameter(torch.zeros(50))
+    opt = SlowMomAdamW([p], lr=1e-3, alpha=1.0, slow_norm=True)
+    worst = 0.0
+    for t in range(400):
+        scale = 10.0 if t < 100 else 1e-3  # gradients shrink sharply, as after a domain switch
+        p.grad = torch.randn(50) * scale
+        opt.step()
+        st = opt.state[p]
+        s = st["s"] / (1 - 0.999 ** st["t"])
+        vs = (st["vs"] / (1 - 0.999 ** st["t"])).sqrt() + 1e-8
+        worst = max(worst, (s / vs).abs().max().item())
+    assert worst <= 1.0 + 1e-4
