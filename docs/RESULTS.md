@@ -215,3 +215,16 @@ Forgetting is undefined without a sequence. Final loss of the one jointly traine
 
 Interpretation: joint training is the upper bound; sequential training with no mitigation loses about 3.5 nats on TinyStories.
 Caveat: not pre-registered; added as a sanity check on the benchmark.
+
+## In-context baseline (not pre-registered; `results/icl/`, `scripts/run_icl.py`)
+The domain-1 (TinyStories) model is frozen, with no weight updates, so TinyStories forgetting is zero by construction.
+Python is supplied only as context: 128-token prefix, loss on the next 128 tokens, 64 windows per seed, seeds 0-2.
+
+| Seed | No context (nats) | 128-token Python context | Gain |
+|---|---|---|---|
+| 0 | 8.83 | 8.77 | 0.06 |
+| 1 | 8.79 | 8.52 | 0.27 |
+| 2 | 8.10 | 7.91 | 0.18 |
+
+Mean gain about 0.17 nats, against about 6 nats of Python learning from weight updates (8.6 to 2.8). In-context exposure
+helps only a little at this scale, and it does so without forgetting. Caveat: a single prefix length; no tuning.

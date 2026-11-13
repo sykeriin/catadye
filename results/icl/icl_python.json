@@ -1,0 +1,17 @@
+{
+ "0": {
+  "no_context": 8.82895565032959,
+  "with_python_context": 8.766936533153057,
+  "n_windows": 64
+ },
+ "1": {
+  "no_context": 8.79202488064766,
+  "with_python_context": 8.523985981941223,
+  "n_windows": 64
+ },
+ "2": {
+  "no_context": 8.095441579818726,
+  "with_python_context": 7.910652011632919,
+  "n_windows": 64
+ }
+}

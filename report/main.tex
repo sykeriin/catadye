@@ -223,6 +223,8 @@ No arm diverged. Slow momentum lowers forgetting by $0.41$ [$-0.48,-0.35$] (abou
 
 \paragraph{Joint-training upper bound (not pre-registered).} Training both domains interleaved at the same lr and step budget gives TinyStories $3.21\pm0.02$ and Python $2.67\pm0.01$ (5 seeds). Sequential training with no mitigation loses about $3.5$ nats on TinyStories, so the benchmark has room for a remedy; the joint run is a reference point, not a forgetting measurement.
 
+\paragraph{In-context reference (not pre-registered).} With the domain-1 model frozen, a 128-token Python prefix lowers Python loss on the next 128 tokens by about $0.17$ nats on average (seeds 0--2; from $8.6$ to $8.4$), with zero forgetting by construction. Weight training reduces Python loss from about $8.6$ to $2.8$, so at this scale in-context exposure contributes little.
+
 \subsection{Post-hoc diagnostic: where does the movement happen?}
 To explain the null, I saved checkpoints after each domain and measured relative weight drift $\|\theta_2-\theta_1\|/\|\theta_1\|$ per parameter group (baseline: 3 seeds; CMS and LR-matched: 1 seed each).
 Staggering does what it should: sub-block 3 moves $0.13$ (CMS) and $0.01$ (LR-matched) against $0.62$ for the baseline, sub-block 2 moves $0.22$ and $0.10$ against $0.64$.
