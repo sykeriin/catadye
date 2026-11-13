@@ -177,8 +177,8 @@ CMS forgets $31\%$, $11\%$ and $8\%$ less than single-rate updates at the three 
 The LR-matched control, however, forgets $36\%$, $20\%$ and $16\%$ less than single-rate and $8$--$11\%$ less than CMS at every learning rate (Figure~\ref{fig:ttt}). Even the lowest rate forgets 2.7 nats with single-rate
 updates, so this grid never reaches a mild regime.
 
-	extbf{Lower learning rates (exploratory follow-up).} I therefore added $10^{-5}$ and $3	imes10^{-5}$ (18 runs, declared and tagged as 	exttt{prereg-stage1b-low} before running; no gate).
-Forgetting (final Python loss) is 0.85 (5.92), 0.50 (5.95), 0.46 (5.96) for single-rate, CMS and LR-matched at $10^{-5}$, and 1.41 (5.86), 0.91 (5.89), 0.83 (5.89) at $3	imes10^{-5}$.
+\textbf{Lower learning rates (exploratory follow-up).} I therefore added $10^{-5}$ and $3\times10^{-5}$ (18 runs, declared and tagged as \texttt{prereg-stage1b-low} before running; no gate).
+Forgetting (final Python loss) is 0.85 (5.92), 0.50 (5.95), 0.46 (5.96) for single-rate, CMS and LR-matched at $10^{-5}$, and 1.41 (5.86), 0.91 (5.89), 0.83 (5.89) at $3\times10^{-5}$.
 CMS forgets $41\%$ and $36\%$ less than single-rate; the LR-matched control forgets $8\%$ and $9\%$ less than CMS; all intervals exclude zero, with the same 3-seed caveat. The ordering is unchanged in the milder regime.
 
 \begin{figure}[t]\centering
@@ -187,21 +187,21 @@ CMS forgets $41\%$ and $36\%$ less than single-rate; the LR-matched control forg
 \end{figure}
 
 \subsection{Controls and slow momentum (Stage 1c)}\label{sec:s1c}
-Declared and tagged (	exttt{prereg-stage1c}) before running; same 24.0M-parameter setup, seeds 0--2, 21 runs. Excess forgetting is read against the baseline frontier at each arm's own new-domain loss.
-egin{table}[h]\centering\small
-egin{tabular}{llcc}	oprule
-Arm & lr & Forgetting & Python loss\\midrule
-Baseline & $3	imes10^{-4}$ / $6	imes10^{-4}$ / $1.2	imes10^{-3}$ & 3.17 / 3.57 / 4.01 & 2.69 / 2.49 / 2.37\
-Replay (12.5\%) & same & 0.18 / 0.29 / 0.40 & 2.72 / 2.54 / 2.40\
-EWC $\lambda=10$ & $6	imes10^{-4}$ & 0.26 & 3.83\
-EWC $\lambda=1000$ & $6	imes10^{-4}$ & 0.01 & 4.53\
-Slow momentum (± CMS) & $6	imes10^{-4}$ & diverged & 5.0\ottomrule
+Declared and tagged (\texttt{prereg-stage1c}) before running; same 24.0M-parameter setup, seeds 0--2, 21 runs. Excess forgetting is read against the baseline frontier at each arm's own new-domain loss.
+\begin{table}[h]\centering\small
+\begin{tabular}{llcc}\toprule
+Arm & lr & Forgetting & Python loss\\ \midrule
+Baseline & $3\times10^{-4}$ / $6\times10^{-4}$ / $1.2\times10^{-3}$ & 3.17 / 3.57 / 4.01 & 2.69 / 2.49 / 2.37\\
+Replay (12.5\%) & same & 0.18 / 0.29 / 0.40 & 2.72 / 2.54 / 2.40\\
+EWC $\lambda=10$ & $6\times10^{-4}$ & 0.26 & 3.83\\
+EWC $\lambda=1000$ & $6\times10^{-4}$ & 0.01 & 4.53\\
+Slow momentum ($\pm$ CMS) & $6\times10^{-4}$ & diverged & 5.0\\ \bottomrule
 \end{tabular}
 \caption{Stage 1c: forgetting in nats, mean of 3 seeds.}
 \end{table}
-	extbf{Replay passes the sanity check (H7):} about $90\%$ less forgetting than the baseline frontier ($-3.17$ [$-3.28,-3.09$] and $-3.52$ [$-3.53,-3.50$] at the two higher rates; the lowest rate falls slightly outside the baseline's range, so raw numbers are shown). The benchmark can detect a real remedy, and the effect is about ten times anything seen for staggering.
-	extbf{EWC} avoids forgetting by not learning Python (loss 3.8--4.5 against 2.5), so the matched-plasticity readout has no overlap and no claim is made.
-	extbf{Slow momentum was unstable as declared} (old-domain loss in the thousands after domain 2; domain 1 already trained worse, 3.48 against 3.13), so H3 and H4 are not assessed. A post-hoc check (seed 0, not pre-registered) that resets optimizer state at the domain boundary did not fix it, while plain AdamW with the same reset behaved normally; I did not find the cause and did not tune the declared constants. This tests my variant (no orthogonalisation) at one learning rate, not M3.
+\textbf{Replay passes the sanity check (H7):} about $90\%$ less forgetting than the baseline frontier ($-3.17$ [$-3.28,-3.09$] and $-3.52$ [$-3.53,-3.50$] at the two higher rates; the lowest rate falls slightly outside the baseline's range, so raw numbers are shown). The benchmark can detect a real remedy, and the effect is about ten times anything seen for staggering.
+\textbf{EWC} avoids forgetting by not learning Python (loss 3.8--4.5 against 2.5), so the matched-plasticity readout has no overlap and no claim is made.
+\textbf{Slow momentum was unstable as declared} (old-domain loss in the thousands after domain 2; domain 1 already trained worse, 3.48 against 3.13), so H3 and H4 are not assessed. A post-hoc check (seed 0, not pre-registered) that resets optimizer state at the domain boundary did not fix it, while plain AdamW with the same reset behaved normally; I did not find the cause and did not tune the declared constants. This tests my variant (no orthogonalisation) at one learning rate, not M3.
 
 \subsection{Post-hoc diagnostic: where does the movement happen?}
 To explain the null, I saved checkpoints after each domain and measured relative weight drift $\|\theta_2-\theta_1\|/\|\theta_1\|$ per parameter group (baseline: 3 seeds; CMS and LR-matched: 1 seed each).
