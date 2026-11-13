@@ -221,6 +221,8 @@ CMS + slow momentum & $3.24\pm0.05$ & $2.94$ & $6.48$\\ \bottomrule
 \end{table}
 No arm diverged. Slow momentum lowers forgetting by $0.41$ [$-0.48,-0.35$] (about $11\%$), but raises the new-domain loss by $0.17$ [$+0.15,+0.18$]: the model learns Python less well. The pre-registered plasticity band (within $2\%$) fails, so \textbf{H3 fails}; the reduction looks like the learning-rate effect seen in Stage 1. The CMS $\times$ slow-momentum interaction is $-0.08$ [$-0.20,+0.04$], so \textbf{H4 is null}. Single learning rate, so there is no matched-plasticity frontier.
 
+\paragraph{Joint-training upper bound (not pre-registered).} Training both domains interleaved at the same lr and step budget gives TinyStories $3.21\pm0.02$ and Python $2.67\pm0.01$ (5 seeds). Sequential training with no mitigation loses about $3.5$ nats on TinyStories, so the benchmark has room for a remedy; the joint run is a reference point, not a forgetting measurement.
+
 \subsection{Post-hoc diagnostic: where does the movement happen?}
 To explain the null, I saved checkpoints after each domain and measured relative weight drift $\|\theta_2-\theta_1\|/\|\theta_1\|$ per parameter group (baseline: 3 seeds; CMS and LR-matched: 1 seed each).
 Staggering does what it should: sub-block 3 moves $0.13$ (CMS) and $0.01$ (LR-matched) against $0.62$ for the baseline, sub-block 2 moves $0.22$ and $0.10$ against $0.64$.

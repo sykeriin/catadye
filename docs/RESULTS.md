@@ -203,3 +203,15 @@ Seed-paired bootstrap:
 
 Stability: no arm diverged. Caveats: one learning rate, so no matched-plasticity frontier; the forgetting gain tracks reduced
 learning, as the learning-rate control did in Stage 1.
+
+## Joint-training upper bound (not pre-registered; `results/joint/`, `scripts/run_joint.py`)
+Both domains interleaved, lr 6e-4, same total steps as the sequential runs (2 x 2000), 5 seeds, order A.
+Forgetting is undefined without a sequence. Final loss of the one jointly trained model:
+
+| Domain | Final loss (mean ± sd, 5 seeds) | Sequential baseline (after Python) |
+|---|---|---|
+| TinyStories | 3.205 ± 0.020 | 6.68 (old-domain loss) |
+| Python | 2.665 ± 0.012 | 2.80 (plasticity) |
+
+Interpretation: joint training is the upper bound; sequential training with no mitigation loses about 3.5 nats on TinyStories.
+Caveat: not pre-registered; added as a sanity check on the benchmark.

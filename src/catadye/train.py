@@ -72,7 +72,34 @@ def run(cfg: dict, out_dir: str | Path = "results") -> dict:
         torch.cuda.reset_peak_memory_stats()
     gstep = 0
     ewc_state = None
-    for i, d in enumerate(domains):
+    if cfg.get("joint"):
+        # Upper bound: all domains interleaved (one batch from each domain per round), same total steps.
+        # There is no sequence, so forgetting is undefined; the final model's loss on each domain is stored
+        # in every row of R (R[i, j] is the same for all i) and in res["joint_final"].
+        T_ = len(domains)
+        micro = cfg.get("micro_batches", 1)
+        assert bs % micro == 0
+        batchers = [Batcher(data[d][0], mc.ctx, bs // micro, seed=cfg["seed"] * 1000 + k, device=device)
+                    for k, d in enumerate(domains)]
+        for s in range(steps * T_):
+            gstep += 1
+            so.set_lr(lr_at(s, steps * T_, cfg["lr"], cfg.get("warmup", 100)))
+            batcher = batchers[s % T_]
+            for _ in range(micro):
+                x, y = batcher.get()
+                with torch.autocast(device, dtype=torch.bfloat16, enabled=(device == "cuda")):
+                    _, loss = model(x, y)
+                (loss / micro).backward()
+                tokens += x.numel()
+            so.step(gstep)
+            if (s + 1) % 200 == 0:
+                log.append(dict(domain=domains[s % T_], step=s + 1, loss=loss.item()))
+        final = np.array([evaluate(model, ev[dj], device) for dj in domains])
+        R[:, :] = final[None, :]
+        domains_sched = []
+    else:
+        domains_sched = domains
+    for i, d in enumerate(domains_sched):
         micro = cfg.get("micro_batches", 1)  # same gradient, lower peak memory (4 GB card)
         assert bs % micro == 0
         batcher = Batcher(data[d][0], mc.ctx, bs // micro, seed=cfg["seed"] * 1000 + i, device=device)
@@ -112,7 +139,8 @@ def run(cfg: dict, out_dir: str | Path = "results") -> dict:
         name=cfg["name"], seed=cfg["seed"], mode=cfg["mode"], domains=domains, cfg=cfg,
         n_params=model.n_params(),
         sub_param_share=sum(p.numel() for n, p in model.named_parameters() if ".mlp.subs." in n) / model.n_params(),
-        R0=R0.tolist(), R=R.tolist(), wall_s=wall, tokens=tokens,
+        R0=R0.tolist(), R=R.tolist(), joint_final=(R[0].tolist() if cfg.get("joint") else None),
+        wall_s=wall, tokens=tokens,
         tokens_per_s=tokens / wall, frac_params_updated_per_step=so.fraction_updated_per_step(model),
         peak_vram_mb=(torch.cuda.max_memory_allocated() / 2**20 if device == "cuda" else None), log=log,
     )
