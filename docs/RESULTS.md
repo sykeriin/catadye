@@ -183,3 +183,23 @@ Forgetting in nats (new-domain = Python loss in brackets), mean of 3 seeds. Base
   state is not the (whole) cause; I did not find the cause and did not tune alpha, beta or lr, as declared. This tests
   my specific slow-momentum variant at lr 6e-4, not M3.
 - CMS reference through the same readout: +0.09 [-0.16, +0.22] (+2.3% of baseline), fail, matching the pilots.
+
+## Stage 1e: stable slow momentum, 2x2 at 5 seeds (declared `prereg-stage1e`; 10 new runs, lr 6e-4, order A, 24.0M params)
+The Stage 1c optimizer diverged because its slow term grew to ~300x the Adam denominator (exploratory diagnosis). The bounded
+variant (`slow_norm=True`) keeps the slow term at most 1. Baseline and CMS reference arms are the revised-pilot runs at lr 6e-4.
+
+| Arm | Forgetting (nats) | Plasticity loss (mean diagonal) | Old-domain loss after domain 2 |
+|---|---|---|---|
+| None (reference) | 3.58 ± 0.09 | 2.80 | 6.68 |
+| Slow momentum | 3.17 ± 0.03 | 2.97 | 6.45 |
+| CMS 1/8/64 (reference) | 3.73 ± 0.09 | 2.75 | 6.77 |
+| CMS + slow momentum | 3.24 ± 0.05 | 2.94 | 6.48 |
+
+Seed-paired bootstrap:
+- H3, slow momentum vs none, forgetting: −0.41 [−0.48, −0.35] (about −11%). Plasticity: +0.17 [+0.15, +0.18]. The pre-registered
+  plasticity band (within 2%) fails, so **H3 fails**: the reduction comes with learning the new domain less.
+- H3 within CMS, forgetting: −0.49 [−0.57, −0.43]; plasticity +0.20 [+0.17, +0.22]. Same pattern, **H3 fails**.
+- H4, CMS × slow momentum interaction: −0.08 [−0.20, +0.04]. CI includes zero, **no interaction**.
+
+Stability: no arm diverged. Caveats: one learning rate, so no matched-plasticity frontier; the forgetting gain tracks reduced
+learning, as the learning-rate control did in Stage 1.

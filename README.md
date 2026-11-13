@@ -161,6 +161,7 @@ Limits: 3 seeds, one period set (1/8/64), small from-scratch models, replay and 
 | Pilot 1 (16.1M params) | done, negative |
 | Pilot revision 1: bigger staggered share, learning-rate sweep, order check | done, negative, tag `prereg-pilot-rev1` |
 | Stage 1d: pilot revision 1 at 5 seeds (`prereg-stage1d`) | done, negative on 5 seeds too |
+| Stage 1e: stable slow momentum, 2x2 at 5 seeds (`prereg-stage1e`) | done: stable; forgetting falls ~11% but with less learning (H3 fails); no CMS interaction (H4 null) |
 | Stage 1b: test-time probe | done (`prereg-stage1b`): declared hypotheses fail; post-hoc per-lr result above |
 | Post-hoc diagnostics: where does the forgetting live? | done, exploratory (drift figure above) |
 | Report | done: [report/main.pdf](report/main.pdf) |
