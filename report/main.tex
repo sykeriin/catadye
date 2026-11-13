@@ -142,6 +142,10 @@ $1.2\times10^{-3}$ & 2.659, 4.007 & 2.588, 4.260 & 2.597, 4.069\\\bottomrule
 \caption{Revised pilot, order A: (new-domain loss, forgetting in nats), mean of 3 seeds.}\label{tab:p2}
 \end{table}
 
+With seeds 3 and 4 added (Stage 1d, 5 seeds, same design and criteria), matched-plasticity forgetting at new-domain loss $2.790$ is
+$3.587\pm0.119$ (baseline), $3.645\pm0.087$ (CMS) and $3.540\pm0.059$ (LR-matched). CMS minus baseline is $+0.059$ [$-0.076,+0.183$];
+CMS minus LR-matched is $+0.106$ [$+0.016,+0.195$], so CMS forgets more. Both criteria fail on five seeds as on three.
+
 At every learning rate CMS learns the new domain slightly better and forgets slightly more, so the three arms lie on essentially the same
 stability--plasticity line (Figure~\ref{fig:front}). At the matched new-domain loss of 2.79 (inside every arm's range for every seed):
 baseline $3.592\pm0.163$, CMS $3.678\pm0.060$, LR-matched $3.567\pm0.049$. CMS minus baseline: $+0.085$ [$-0.169,+0.252$] ($+2.4\%$);
@@ -229,7 +233,7 @@ the self-modifying memory, multi-timescale momentum (the pre-registered slow-mom
 standard continual-learning controls is made.
 
 \textbf{Limitations.}
-\emph{Small scale and few seeds:} 3 seeds, one period set, $\leq$24M parameters, two domains; bootstrap intervals with 3 seeds are coarse.
+\emph{Small scale and few seeds:} 5 seeds on the revised pilot (3 for the other stages), one period set, $\leq$24M parameters, two domains; bootstrap intervals with 3 seeds are coarse.
 \emph{Nondeterminism:} re-running a seed does not reproduce the loss matrix. After domain 1 reruns agree to 0.002 nats, but forgetting after domain 2 differs by $-0.09$ to $+0.11$ nats
 between same-seed runs (5 reruns), comparable to the CMS-versus-baseline differences. The CIs include this noise, and the 10\% bar ($\sim$0.36 nats) is well above it, but effects below roughly 0.1 nats are not resolvable per run.
 \emph{Implementation details:} the global step counter, and hence the CMS update phase, continues across the domain boundary without flushing partially accumulated gradients (up to 16 steps of the period-64 block's accumulation carry into domain 2),

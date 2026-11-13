@@ -65,6 +65,8 @@ Forgetting in nats at matched new-domain loss (2.79); lower is better.
 - The pre-registered bar was a 10% reduction with the CI below zero. It was not met, so the pre-registered gate
   selects the short version of the plan.
 - Reversing the domain order gives the same picture. The first pilot (16.1M params) was also negative.
+- Five seeds (Stage 1d, added after the 3-seed result): CMS 3.65 ± 0.09 vs baseline 3.59 ± 0.12 and LR-matched 3.54 ± 0.06.
+  CMS vs baseline +0.06 [−0.08, +0.18]; CMS vs LR-matched +0.11 [+0.02, +0.20], CMS forgets more. Same conclusion.
 - Full numbers: [docs/RESULTS.md](docs/RESULTS.md).
 
 ## Test-time probe (Stage 1b)
@@ -158,6 +160,7 @@ Limits: 3 seeds, one period set (1/8/64), small from-scratch models, replay and 
 | Plan and pre-registration | done, tag `prereg-v1` |
 | Pilot 1 (16.1M params) | done, negative |
 | Pilot revision 1: bigger staggered share, learning-rate sweep, order check | done, negative, tag `prereg-pilot-rev1` |
+| Stage 1d: pilot revision 1 at 5 seeds (`prereg-stage1d`) | done, negative on 5 seeds too |
 | Stage 1b: test-time probe | done (`prereg-stage1b`): declared hypotheses fail; post-hoc per-lr result above |
 | Post-hoc diagnostics: where does the forgetting live? | done, exploratory (drift figure above) |
 | Report | done: [report/main.pdf](report/main.pdf) |

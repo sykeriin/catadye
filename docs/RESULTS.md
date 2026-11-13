@@ -44,6 +44,26 @@ range for every seed, so the matched-plasticity test was valid. Outcome: criteri
 gate = short version. Per the declaration, no further pilot revisions will be made.
 Caveats: 3 seeds; one period set (1/8/64); small scale (24.0M params); from-scratch model; no replay.
 
+### Stage 1d: five seeds (declared `prereg-stage1d`, 24 runs, seeds 3-4 added to the revised pilot)
+Per-learning-rate means over 5 seeds (new-domain loss, forgetting in nats), order A:
+
+| lr | baseline | CMS 1/8/64 | LR-matched |
+|---|---|---|---|
+| 3e-4 | 3.000, 3.132 | 2.976, 3.277 | 2.971, 3.226 |
+| 6e-4 | 2.796, 3.575 | 2.746, 3.731 | 2.749, 3.612 |
+| 1.2e-3 | 2.656, 4.065 | 2.583, 4.277 | 2.595, 4.104 |
+
+Matched-plasticity forgetting at new-domain loss 2.790 (all arms' ranges contain it for every seed):
+baseline 3.587 ± 0.119, CMS 3.645 ± 0.087, LR-matched 3.540 ± 0.059.
+
+- CMS vs baseline: +0.059 [−0.076, +0.183] (+1.6%). Criterion (a) fails.
+- CMS vs LR-matched: +0.106 [+0.016, +0.195] (+3.0%). Criterion (b) fails; the CI excludes zero but CMS forgets *more*.
+- LR-matched vs baseline: −0.047 [−0.128, +0.034].
+- Order B (lr 6e-4, n=5): baseline 4.884 ± 0.196, CMS 5.193 ± 0.154, LR-matched 5.105 ± 0.276.
+
+Outcome: both criteria fail on 5 seeds, as on 3 seeds. Gate = short version. The 3-seed and 5-seed results agree in
+direction; no disagreement to report. The 3-seed table above is kept as the original record.
+
 ### Post-hoc diagnostics (2026-11-12): where does the forgetting live? — EXPLORATORY, not pre-registered
 Models: revised-pilot recipe, order A, lr 6e-4; baseline seeds 0-2, CMS and LR-matched seed 0 only
 (n=1 each). Checkpoints after each domain; script `scripts/diagnose.py`, raw output
