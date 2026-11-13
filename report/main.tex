@@ -207,6 +207,20 @@ Slow momentum ($\pm$ CMS) & $6\times10^{-4}$ & diverged & 5.0\\ \bottomrule
 \textbf{EWC} avoids forgetting by not learning Python (loss 3.8--4.5 against 2.5), so the matched-plasticity readout has no overlap and no claim is made.
 \textbf{Slow momentum was unstable as declared} (old-domain loss in the thousands after domain 2; domain 1 already trained worse, 3.48 against 3.13), so H3 and H4 are not assessed. A post-hoc check (seed 0, not pre-registered) that resets optimizer state at the domain boundary did not fix it, while plain AdamW with the same reset behaved normally; I did not find the cause and did not tune the declared constants. This tests my variant (no orthogonalisation) at one learning rate, not M3.
 
+\subsection{Stage 1e: stable slow momentum and the 2$\times$2}\label{sec:s1e}
+Declared and tagged (\texttt{prereg-stage1e}) before running. The divergence was traced (exploratory) to the slow term growing to about 300 times the Adam denominator within 400 steps, because the slow average is not scaled by its own second moment. The fix divides the slow term by its own long-horizon second moment, which bounds it by one at every step (a stability change, not a tuned constant). The 2$\times$2 (CMS on/off $\times$ slow momentum on/off) runs at $6\times10^{-4}$, order A, seeds 0--4: ten new runs, with baseline and CMS reused from the revised pilot.
+\begin{table}[h]\centering\small
+\begin{tabular}{lccc}\toprule
+Arm & Forgetting & Plasticity loss & Old-domain loss\\ \midrule
+Baseline & $3.58\pm0.09$ & $2.80$ & $6.68$\\
+Slow momentum & $3.17\pm0.03$ & $2.97$ & $6.45$\\
+CMS 1/8/64 & $3.73\pm0.09$ & $2.75$ & $6.77$\\
+CMS + slow momentum & $3.24\pm0.05$ & $2.94$ & $6.48$\\ \bottomrule
+\end{tabular}
+\caption{Stage 1e: forgetting in nats and plasticity (mean diagonal loss), mean of 5 seeds. Single learning rate.}
+\end{table}
+No arm diverged. Slow momentum lowers forgetting by $0.41$ [$-0.48,-0.35$] (about $11\%$), but raises the new-domain loss by $0.17$ [$+0.15,+0.18$]: the model learns Python less well. The pre-registered plasticity band (within $2\%$) fails, so \textbf{H3 fails}; the reduction looks like the learning-rate effect seen in Stage 1. The CMS $\times$ slow-momentum interaction is $-0.08$ [$-0.20,+0.04$], so \textbf{H4 is null}. Single learning rate, so there is no matched-plasticity frontier.
+
 \subsection{Post-hoc diagnostic: where does the movement happen?}
 To explain the null, I saved checkpoints after each domain and measured relative weight drift $\|\theta_2-\theta_1\|/\|\theta_1\|$ per parameter group (baseline: 3 seeds; CMS and LR-matched: 1 seed each).
 Staggering does what it should: sub-block 3 moves $0.13$ (CMS) and $0.01$ (LR-matched) against $0.62$ for the baseline, sub-block 2 moves $0.22$ and $0.10$ against $0.64$.
