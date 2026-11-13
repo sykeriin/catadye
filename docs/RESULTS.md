@@ -136,3 +136,30 @@ Same pattern as Stage 1b, in the milder regime: staggering forgets 36-41% less t
 LR-matched control forgets 8-9% less than staggering. Python loss is nearly identical across arms (within 0.04), so
 this is close to a matched-plasticity comparison. Caveats: 3 seeds, bootstrap CIs over 3 pairs are narrow and
 should be read cautiously, same-seed reruns differ by ~0.1 nats, one set of periods.
+
+## Stage 1c: controls and slow momentum (declared `prereg-stage1c`; 21 runs, seeds 0-2, 24.0M params)
+
+Forgetting in nats (new-domain = Python loss in brackets), mean of 3 seeds. Baseline from pilot_rev at the same lr.
+
+| Arm | lr | Forgetting (Python loss) | Baseline at that lr |
+|---|---|---|---|
+| replay 12.5% | 3e-4 | 0.18 (2.72) | 3.17 (2.69) |
+| replay 12.5% | 6e-4 | 0.29 (2.54) | 3.57 (2.49) |
+| replay 12.5% | 1.2e-3 | 0.40 (2.40) | 4.01 (2.37) |
+| EWC lambda=10 | 6e-4 | 0.26 (3.83) | 3.57 (2.49) |
+| EWC lambda=1000 | 6e-4 | 0.01 (4.53) | 3.57 (2.49) |
+| slow momentum | 6e-4 | diverged: TinyStories loss ~1,000 (Python 5.11) | |
+| CMS + slow momentum | 6e-4 | diverged: TinyStories loss ~2,000 (Python 4.97) | |
+
+- **H7 (sanity) passes.** Replay forgets about 90% less than the baseline's matched-plasticity frontier
+  (-3.17 [-3.28, -3.09] at 6e-4, -3.52 [-3.53, -3.50] at 1.2e-3; the 3e-4 point lies slightly outside the baseline's
+  range, raw numbers shown). The benchmark detects a real remedy, and its effect (~10x) dwarfs anything seen for staggering.
+- **EWC** avoids forgetting by not learning the new domain (Python loss 3.8-4.5 vs 2.5), so the declared
+  matched-plasticity readout has no overlap and cannot score it. No claim either way.
+- **H3 and H4 cannot be assessed.** Both slow-momentum arms are unstable as declared. Domain 1 already trains worse
+  (3.48 vs 3.13) and the model blows up on domain 2. Post-hoc check (not pre-registered, seed 0): resetting the
+  optimizer state at the domain boundary does not fix it (slow momentum: TinyStories 58, Python 6.2; CMS + slow
+  momentum: 137, 4.3), while plain AdamW with the same reset behaves normally (forgetting 3.65, Python 2.52). So stale
+  state is not the (whole) cause; I did not find the cause and did not tune alpha, beta or lr, as declared. This tests
+  my specific slow-momentum variant at lr 6e-4, not M3.
+- CMS reference through the same readout: +0.09 [-0.16, +0.22] (+2.3% of baseline), fail, matching the pilots.

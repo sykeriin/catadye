@@ -94,6 +94,19 @@ Forgetting in nats, final Python loss in brackets (3 seeds):
   as well. This is not Hope's full mechanism: no nested consolidation, and the base model was not trained with
   staggered blocks. Even the lowest learning rate here forgets 2.7 nats, so the grid never reaches a mild regime.
 
+## Controls and slow momentum (Stage 1c)
+
+| Arm | Forgetting (nats) | Python loss |
+|---|---|---|
+| Baseline (same lr) | 3.2-4.0 | 2.4-2.7 |
+| Replay, 12.5% old data | **0.2-0.4** | 2.4-2.7 |
+| EWC (lambda 10 / 1000) | 0.26 / 0.01 | 3.8 / 4.5 (barely learns) |
+| Slow momentum, with or without CMS | unstable (diverged) | 5 |
+
+Replay cuts forgetting about 10x at the same learning, so the benchmark can detect a real remedy; staggering did not
+come close. EWC only avoids forgetting by not learning. My slow-momentum variant was unstable as declared, so
+H3/H4 are not assessed (a post-hoc optimizer-state reset did not fix it). Details: [docs/RESULTS.md](docs/RESULTS.md).
+
 ## Why is there no effect? (post-hoc, exploratory)
 
 I measured how far each part of the model moves while it learns the second domain. The staggering works as
@@ -136,7 +149,7 @@ flowchart LR
     class N1,N2,N3 none
 ```
 
-Limits: 3 seeds, one period set (1/8/64), small from-scratch models, no replay baseline yet; same-seed reruns differ by up to ~0.1 nats.
+Limits: 3 seeds, one period set (1/8/64), small from-scratch models, replay and EWC run at one lr set, 3 seeds; same-seed reruns differ by up to ~0.1 nats.
 
 ## Status
 
@@ -148,7 +161,8 @@ Limits: 3 seeds, one period set (1/8/64), small from-scratch models, no replay b
 | Stage 1b: test-time probe | done (`prereg-stage1b`): declared hypotheses fail; post-hoc per-lr result above |
 | Post-hoc diagnostics: where does the forgetting live? | done, exploratory (drift figure above) |
 | Report | done: [report/main.pdf](report/main.pdf) |
-| Main grid (replay, EWC, slow momentum), LoRA stage | not run (see report, Sec. 5) |
+| Stage 1c: replay, EWC, slow momentum (`prereg-stage1c`) | done: replay works (-90%), EWC uninformative, slow momentum unstable |
+| 2x2 at 5 seeds, joint/in-context baselines, pretrained check, LoRA stage | not run (see report) |
 
 Every stage's design was committed and tagged **before** its runs. The criteria, thresholds and deviations are in
 [docs/PREREGISTRATION.md](docs/PREREGISTRATION.md).

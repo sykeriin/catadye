@@ -51,11 +51,13 @@ def run(cfg: dict, out_dir: str | Path = "results") -> dict:
     np.random.seed(cfg["seed"])
     mc = GPTConfig(**cfg.get("model", {}))
     model = GPT(mc).to(device)
-    so = StaggeredOptimizer(model, mode=cfg["mode"], periods=cfg.get("periods", (1, 8, 64)), lr=cfg["lr"],
-                            weight_decay=cfg.get("weight_decay", 0.1),
-                            **({"optimizer_cls": SlowMomAdamW, "optimizer_kwargs": dict(
-                                slow_beta=cfg.get("slow_beta", 0.999), alpha=cfg.get("slow_alpha", 1.0))}
-                               if cfg.get("slowmom") else {}))
+    def make_opt():
+        return StaggeredOptimizer(model, mode=cfg["mode"], periods=cfg.get("periods", (1, 8, 64)), lr=cfg["lr"],
+                                  weight_decay=cfg.get("weight_decay", 0.1),
+                                  **({"optimizer_cls": SlowMomAdamW, "optimizer_kwargs": dict(
+                                      slow_beta=cfg.get("slow_beta", 0.999), alpha=cfg.get("slow_alpha", 1.0))}
+                                     if cfg.get("slowmom") else {}))
+    so = make_opt()
     domains = cfg["domains"]
     data = {d: load_domain(d) for d in domains}
     ev = {d: eval_windows(data[d][1], mc.ctx, cfg.get("eval_windows", 64), device) for d in domains}
@@ -73,6 +75,8 @@ def run(cfg: dict, out_dir: str | Path = "results") -> dict:
         micro = cfg.get("micro_batches", 1)  # same gradient, lower peak memory (4 GB card)
         assert bs % micro == 0
         batcher = Batcher(data[d][0], mc.ctx, bs // micro, seed=cfg["seed"] * 1000 + i, device=device)
+        if i > 0 and cfg.get("reset_opt"):  # post-hoc option: fresh optimizer state at the domain boundary
+            so = make_opt()
         ewc = ewc_state if (i > 0 and cfg.get("ewc_lambda")) else None
         replay = Batcher(data[domains[0]][0], mc.ctx, bs // micro, seed=cfg["seed"] * 1000 + 500 + i, device=device)             if (i > 0 and cfg.get("replay_seqs")) else None
         for s in range(steps):
